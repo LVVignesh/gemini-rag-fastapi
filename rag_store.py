@@ -1,67 +1,78 @@
 import os
 import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from pypdf import PdfReader
+from sentence_transformers import SentenceTransformer
 
-DATA_DIR = "data"
-INDEX_FILE = "vector.index"
-DOCS_FILE = "documents.npy"
-META_FILE = "metadata.npy"
+# -----------------------
+# Global in-memory state
+# -----------------------
+index = None
+documents = []
+metadata = []
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-# -------------------------
-# Load or build index
-# -------------------------
-if os.path.exists(INDEX_FILE):
-    print("🔁 Loading FAISS index from disk...")
-    index = faiss.read_index(INDEX_FILE)
-    documents = np.load(DOCS_FILE, allow_pickle=True)
-    metadata = np.load(META_FILE, allow_pickle=True)
-else:
-    print("🧠 Building FAISS index...")
+# -----------------------
+# Ingest uploaded files
+# -----------------------
+def ingest_documents(files):
+    global index, documents, metadata
+
     texts = []
     meta = []
 
-    for file in os.listdir(DATA_DIR):
-        if file.endswith(".pdf"):
-            reader = PdfReader(os.path.join(DATA_DIR, file))
+    for file in files:
+        filename = file.filename
+
+        if filename.endswith(".pdf"):
+            reader = PdfReader(file.file)
             for i, page in enumerate(reader.pages):
                 text = page.extract_text()
                 if text:
                     texts.append(text)
                     meta.append({
-                        "source": file,
+                        "source": filename,
                         "page": i + 1
                     })
 
-    embeddings = model.encode(texts)
+        elif filename.endswith(".txt"):
+            content = file.file.read().decode("utf-8")
+            texts.append(content)
+            meta.append({
+                "source": filename,
+                "page": "N/A"
+            })
+
+    if not texts:
+        raise ValueError("No readable text found.")
+
+    embeddings = embedder.encode(texts)
+
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(np.array(embeddings))
-
-    np.save(DOCS_FILE, texts)
-    np.save(META_FILE, meta)
-    faiss.write_index(index, INDEX_FILE)
 
     documents = texts
     metadata = meta
 
-    print("✅ FAISS index saved to disk.")
+    return len(texts)
 
-# -------------------------
+# -----------------------
 # Search
-# -------------------------
+# -----------------------
 def search_knowledge(query, top_k=5):
-    query_vec = model.encode([query])
+    if index is None:
+        return []
+
+    query_vec = embedder.encode([query])
     distances, indices = index.search(query_vec, top_k)
 
     results = []
-    for dist, idx in zip(distances[0], indices[0]):
+    for idx, dist in zip(indices[0], distances[0]):
         results.append({
             "text": documents[idx],
-            "metadata": metadata[idx],
-            "distance": float(dist)
+            "distance": float(dist),
+            "metadata": metadata[idx]
         })
 
     return results
