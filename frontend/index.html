@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gemini RAG Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: radial-gradient(1200px 600px at top, #e0e7ff 0%, #f8fafc 60%);
+      --card: rgba(255,255,255,0.85);
+      --border: rgba(15,23,42,0.08);
+      --primary: #4f46e5;
+      --secondary: #0ea5e9;
+      --text: #0f172a;
+      --muted: #64748b;
+      --error: #dc2626;
+    }
+
+    * { box-sizing: border-box; font-family: Inter, sans-serif; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      color: var(--text);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 980px;
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 36px;
+      border: 1px solid var(--border);
+      box-shadow: 0 40px 120px rgba(15,23,42,.15);
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin: 0;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .card {
+      margin-top: 28px;
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+    }
+
+    input[type="file"], textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+
+    button.secondary { background: var(--secondary); }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(79,70,229,.35);
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: .9rem;
+      color: var(--muted);
+    }
+
+    .answer {
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .error {
+      color: var(--error);
+      margin-top: 10px;
+      font-weight: 500;
+    }
+
+    .loader {
+      font-weight: 600;
+      color: var(--primary);
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: .4 }
+      50% { opacity: 1 }
+      100% { opacity: .4 }
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Gemini RAG Assistant</h1>
+    <div class="subtitle">
+      Upload documents · Ask questions · Get grounded answers
+    </div>
+
+    <!-- Upload -->
+    <div class="card">
+      <h3>📄 Upload documents</h3>
+      <input type="file" id="files" multiple />
+      <div class="row">
+        <button id="uploadBtn" onclick="upload()">Upload & Index</button>
+      </div>
+      <div id="uploadStatus" class="status"></div>
+    </div>
+
+    <!-- Ask -->
+    <div class="card">
+      <h3>💬 Ask or summarize</h3>
+      <textarea id="question" placeholder="Ask something about your documents…"></textarea>
+      <div class="row">
+        <button id="askBtn" onclick="ask()">Ask</button>
+        <button class="secondary" id="sumBtn" onclick="summarize()">Summarize</button>
+      </div>
+    </div>
+
+    <!-- Answer -->
+    <div id="answerBox" class="answer" style="display:none;"></div>
+    <div id="errorBox" class="error"></div>
+
+    <footer>
+      Built with FastAPI · FAISS · Gemini
+    </footer>
+  </div>
+
+<script>
+  let busy = false;
+
+  function setBusy(state) {
+    busy = state;
+    document.getElementById("askBtn").disabled = state;
+    document.getElementById("sumBtn").disabled = state;
+    document.getElementById("uploadBtn").disabled = state;
+  }
+
+  async function upload() {
+    const files = document.getElementById("files").files;
+    if (!files.length) return;
+
+    setBusy(true);
+    document.getElementById("uploadStatus").innerText = "Indexing documents…";
+
+    const fd = new FormData();
+    for (let f of files) fd.append("files", f);
+
+    const res = await fetch("/upload", { method: "POST", body: fd });
+    const data = await res.json();
+
+    document.getElementById("uploadStatus").innerText = data.message || "Done ✅";
+    setBusy(false);
+  }
+
+  async function ask() {
+    const q = document.getElementById("question").value.trim();
+    if (!q || busy) return;
+
+    setBusy(true);
+    document.getElementById("errorBox").innerText = "";
+    document.getElementById("answerBox").style.display = "block";
+    document.getElementById("answerBox").innerHTML = "<span class='loader'>Thinking…</span>";
+
+    try {
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: q })
+      });
+
+      const data = await res.json();
+      document.getElementById("answerBox").innerText = data.answer;
+    } catch {
+      document.getElementById("errorBox").innerText =
+        "⚠️ LLM quota exceeded. Please wait ~1 minute and retry.";
+    }
+
+    setBusy(false);
+  }
+
+  function summarize() {
+    document.getElementById("question").value =
+      "Summarize the uploaded documents in 5 bullet points.";
+    ask();
+  }
+</script>
+</body>
+</html>
