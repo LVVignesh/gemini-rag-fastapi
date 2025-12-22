@@ -1,7 +1,6 @@
-<<<<<<< HEAD
 ---
-title: Gemini Rag Fastapi Pro
-emoji: 🦀
+title: Gemini Rag FastAPI Pro
+emoji: 🤖
 colorFrom: purple
 colorTo: red
 sdk: docker
@@ -10,8 +9,20 @@ license: mit
 short_description: Document-based Q&A using FastAPI, FAISS, and Google Gemini
 ---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
-=======
-# gemini-rag-fastapi
-gemini-rag-fastapi is a production-style backend service built with FastAPI that implements a Retrieval-Augmented Generation (RAG) pipeline. It ingests documents, builds vector indexes using FAISS, and answers user queries using Gemini models with grounded, citation-aware responses.
->>>>>>> f775d6c (Initial commit)
+# Gemini RAG FastAPI Pro
+
+Production-ready Retrieval-Augmented Generation backend built with **FastAPI**, **FAISS**, and **Google Gemini**.
+
+## Tech Stack
+- FastAPI
+- FAISS
+- Google Gemini API
+- Docker
+- Hugging Face Spaces
+
+## Usage
+1. Upload documents
+2. Ask questions
+3. Get grounded answers
+
+Built with ❤️ by Vignesh LV
