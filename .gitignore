@@ -14,6 +14,7 @@ venv/
 data/
 *.npy
 *.index
+*.pkl
 
 # OS / editor
 .vscode/
