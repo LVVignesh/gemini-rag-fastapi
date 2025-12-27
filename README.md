@@ -174,6 +174,8 @@ Open in browser:
 
 http://127.0.0.1:8000
 
+Test and use my RAG project on Hugging face : https://huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro
+
 🧪 Mock Mode (Development)
 
 To test the UI without consuming Gemini API quota:
