@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 from rag_store import ingest_documents, search_knowledge, get_all_chunks, clear_database
+from eval_logger import log_eval
+from analytics import get_analytics
 
 # =========================================================
 # ENV + MODEL SETUP
@@ -18,6 +20,11 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 MODEL_NAME = "gemini-2.5-flash"
 USE_MOCK = False # Set to False to use real API
+
+# =========================================================
+# FILE UPLOAD LIMITS
+# =========================================================
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 # =========================================================
 # APP
@@ -53,18 +60,36 @@ def serve_ui():
     with open("frontend/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/analytics")
+def analytics():
+    """Return analytics data from evaluation logs."""
+    return get_analytics()
+
 # ---------------------------------------------------------
 # UPLOAD
 # ---------------------------------------------------------
 @app.post("/upload")
 async def upload(files: list[UploadFile] = File(...)):
-    # 1. VALIDATION: Strict File Type Check
+    # 1. VALIDATION: File Type and Size Check
     for file in files:
         ext = file.filename.split(".")[-1].lower()
         if ext not in ["pdf", "txt"]:
             return JSONResponse(
                 status_code=400, 
                 content={"error": f"Invalid file type: '{file.filename}'. Only .pdf and .txt files are allowed."}
+            )
+        
+        # Check file size
+        file.file.seek(0, 2)  # Seek to end
+        file_size = file.file.tell()
+        file.file.seek(0)  # Reset to beginning
+        
+        if file_size > MAX_FILE_SIZE:
+            size_mb = file_size / (1024 * 1024)
+            max_mb = MAX_FILE_SIZE / (1024 * 1024)
+            return JSONResponse(
+                status_code=413,
+                content={"error": f"File '{file.filename}' is too large ({size_mb:.1f} MB). Maximum size is {max_mb:.0f} MB."}
             )
 
     try:
@@ -126,13 +151,31 @@ async def ask(data: PromptRequest):
                 return response
             except Exception as e:
                 err_str = str(e)
+                
+                # API Key Issues
+                if "API_KEY" in err_str or "invalid" in err_str.lower() and "key" in err_str.lower():
+                    raise ValueError("Invalid API key. Please check your GEMINI_API_KEY in the .env file.")
+                
+                # Quota Exhausted
+                if "quota" in err_str.lower() or "limit" in err_str.lower():
+                    raise ValueError("API quota exhausted. Please try again later or upgrade your API plan.")
+                
+                # Rate Limiting (429)
                 if "429" in err_str:
                     if attempt < retries:
                         wait_time = base_delay * (2 ** attempt)
                         print(f"DEBUG: 429 Rate limit hit. Retrying in {wait_time}s...")
                         pytime.sleep(wait_time)
                         continue
-                raise e
+                    else:
+                        raise ValueError("Rate limit exceeded. Please try again in a few minutes.")
+                
+                # Safety Filters
+                if "safety" in err_str.lower() or "blocked" in err_str.lower():
+                    raise ValueError("Content was blocked by safety filters. Please rephrase your question.")
+                
+                # Generic error
+                raise ValueError(f"LLM API error: {err_str}")
 
     if is_summary:
         chunks = get_all_chunks(limit=80)
@@ -180,10 +223,18 @@ Content:
             answer_cache[key] = (now, response)
             return response
             
-        except Exception as e:
+        except ValueError as e:
+            # User-friendly error from generate_safe
             print(f"Summary failed: {e}")
             return JSONResponse(status_code=200, content={
-                "answer": f"System is currently overloaded (Rate Limit). Please try again in a minute.\nDetails: {str(e)}",
+                "answer": str(e),
+                "confidence": 0.0,
+                "citations": []
+            })
+        except Exception as e:
+            print(f"Summary failed: {e}")
+            return JSONResponse(status_code=500, content={
+                "answer": f"An unexpected error occurred: {str(e)}",
                 "confidence": 0.0,
                 "citations": []
             })
@@ -199,6 +250,14 @@ Content:
             "confidence": 0.0,
             "citations": []
         }
+
+        log_eval(
+            query=prompt_text,
+            retrieved_count=0,
+            confidence=0.0,
+            answer_known=False
+        )
+
         answer_cache[key] = (now, response)
         return response
 
@@ -219,8 +278,29 @@ Context:
 Question:
 {prompt_text}
 """
-    llm = model.generate_content(prompt)
-    answer_text = llm.text
+    llm = None
+    answer_text = ""
+    
+    try:
+        llm = model.generate_content(prompt)
+        answer_text = llm.text
+    except ValueError as e:
+        # User-friendly error from API
+        response = {
+            "answer": str(e),
+            "confidence": 0.0,
+            "citations": []
+        }
+        answer_cache[key] = (now, response)
+        return response
+    except Exception as e:
+        # Unexpected error
+        response = {
+            "answer": f"An unexpected error occurred: {str(e)}",
+            "confidence": 0.0,
+            "citations": []
+        }
+        return JSONResponse(status_code=500, content=response)
     
     # Fix Fake Confidence: If the model says "I don't know", confidence should be 0.
     confidence = round(min(1.0, len(results) / 5), 2)
@@ -235,6 +315,15 @@ Question:
             for r in results
         }.values())
     }
+
+    answer_known = "i don't know" not in answer_text.lower()
+
+    log_eval(
+        query=prompt_text,
+        retrieved_count=len(results),
+        confidence=confidence,
+        answer_known=answer_known
+    )
 
     answer_cache[key] = (now, response)
     return response
