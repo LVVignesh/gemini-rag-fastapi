@@ -21,6 +21,7 @@ Supports production constraints (file limits, caching, logging)
 The project evolved from RAG v1 → RAG v2, adding real-world scalability and observability.
 
 ✨ Key Features (RAG v2)
+
 📥 Document Ingestion
 
 Upload PDF and TXT files
@@ -98,7 +99,6 @@ Persistent vector store
 
 
 Frontend (HTML / JS)
-
         ↓
 
 FastAPI Backend
@@ -134,7 +134,9 @@ Answer + Confidence + Citations
 Evaluation Logging + Analytics
 
 
+
 🧠 Core Concepts Demonstrated
+
 Retrieval-Augmented Generation (RAG)
 
 Why pure LLMs hallucinate
@@ -181,6 +183,7 @@ Clean Git hygiene
 
 Incremental system evolution
 
+
 🛠️ Tech Stack
 
 Backend
@@ -221,6 +224,8 @@ Hugging Face Spaces (deployment)
 
 Virtual Environments (venv)
 
+
+
 ⚙️ Setup & Run Locally
 
 1️⃣ Clone Repository
@@ -248,6 +253,7 @@ GEMINI_API_KEY=your_api_key_here
 uvicorn main:app --reload
 
 
+
 ⚠️ Known Limitations
 
 Scanned/image-only PDFs require OCR (not included)
@@ -261,6 +267,8 @@ batch ingestion
 sharding
 
 background workers
+
+
 
 🚀 Live Demo
 
