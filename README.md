@@ -1,116 +1,171 @@
-📄 Gemini RAG Assistant (FastAPI)
+📄 Gemini RAG Backend System (FastAPI)
 
-A production-style Retrieval-Augmented Generation (RAG) application built with FastAPI, Google Gemini, and FAISS, capable of answering questions and generating summaries from uploaded documents (PDF/TXT) with grounded responses, citations, and confidence scoring.
+Production-grade Retrieval-Augmented Generation (RAG) backend built with FastAPI, FAISS (ANN), and Google Gemini — featuring hybrid retrieval, HNSW indexing, cross-encoder reranking, evaluation logging, and analytics.
 
-This project evolved iteratively from a simple FastAPI API into a robust, end-to-end AI system, covering real-world challenges like PDF ingestion, vector search, LLM rate limits, and Git hygiene.
+This repository demonstrates how modern AI backend systems are actually built in industry, not toy demos.
 
-🚀 Features
+🚀 What This Project Is
 
-📤 Upload PDF and TXT documents
+This is a full RAG backend system that:
 
-🔍 Retrieval-Augmented Q&A using FAISS
+Ingests large PDF/TXT documents
 
-🧠 Grounded answers powered by Google Gemini
+Builds vector indexes with Approximate Nearest Neighbor (ANN) search
 
-📝 Document summarization using the same RAG pipeline
+Answers questions using grounded LLM responses
 
-📚 Page-level citations for transparency
+Tracks confidence, known/unknown answers, and usage analytics
 
-📊 Confidence scoring based on retrieval strength
+Supports production constraints (file limits, caching, logging)
 
-⚡ Async FastAPI backend (non-blocking I/O)
+The project evolved from RAG v1 → RAG v2, adding real-world scalability and observability.
 
-🧪 Mock mode for UI testing when API quota is exhausted
+✨ Key Features (RAG v2)
+📥 Document Ingestion
 
-🧹 Clean Git history with generated files ignored
+Upload PDF and TXT files
 
-🏗️ Architecture Overview
-Frontend (HTML + JS)
+Sentence-aware chunking with overlap
+
+Page-level metadata for citations
+
+🔍 Retrieval (Hybrid + ANN)
+
+FAISS HNSW ANN index for scalable similarity search
+
+Cosine similarity via normalized embeddings
+
+Keyword boosting for lexical relevance
+
+🧠 Reranking (Quality Boost)
+
+Cross-Encoder (ms-marco-MiniLM) reranking
+
+Improves relevance beyond raw vector similarity
+
+Mimics production search stacks (retrieve → rerank)
+
+🤖 LLM Generation
+
+Google Gemini 2.5 Flash
+
+Strict grounding: answers only from retrieved context
+
+Honest fallback: "I don't know" when unsupported
+
+📊 Evaluation & Monitoring
+
+Logs every query:
+
+retrieved chunk count
+
+confidence score
+
+known vs unknown answers
+
+JSONL logs for offline analysis
+
+Built-in analytics dashboard
+
+📈 Analytics Dashboard
+
+Total queries
+
+Knowledge rate
+
+Average confidence
+
+Unknown query tracking
+
+Recent query history
+
+Dark / Light mode UI
+
+🛡️ Production Safeguards
+
+File upload size limits (configurable)
+
+API quota handling
+
+Caching to reduce LLM calls
+
+Clean error handling
+
+Persistent vector store
+
+
+🏗️ System Architecture
+
+Frontend (HTML / JS)
         ↓
 FastAPI Backend
         ↓
 Document Ingestion (PDF / TXT)
         ↓
+Sentence Chunking + Metadata
+        ↓
 Embeddings (SentenceTransformers)
         ↓
-FAISS Vector Store
+FAISS ANN Index (HNSW)
         ↓
-Retriever (Top-K Similarity Search)
+Hybrid Retrieval (Vector + Keyword)
+        ↓
+Cross-Encoder Reranking
         ↓
 Prompt Assembly
         ↓
 Google Gemini LLM
         ↓
-Grounded Response + Citations + Confidence
+Answer + Confidence + Citations
+        ↓
+Evaluation Logging + Analytics
 
-🧠 Key Concepts Learned
-1. FastAPI Fundamentals
+🧠 Core Concepts Demonstrated
+Retrieval-Augmented Generation (RAG)
 
-GET and POST endpoints
+Why pure LLMs hallucinate
 
-Request/response lifecycle
+How grounding fixes factual accuracy
 
-Input validation using Pydantic models
+Vector search vs keyword search
 
-Async endpoints for non-blocking LLM calls
+Hybrid retrieval strategies
 
-2. Real LLM Integration
+Approximate Nearest Neighbor (ANN)
 
-Secure API key handling via environment variables
+Why brute-force search fails at scale
 
-Structured prompts for strict input/output control
+HNSW indexing for fast similarity search
 
-Handling rate limits and safety-filtered responses
+efConstruction vs efSearch trade-offs
 
-Graceful error handling and fallbacks
+Reranking
 
-3. Retrieval-Augmented Generation (RAG)
+Why top-K vectors ≠ best answers
 
-Why LLMs alone are unreliable for factual answers
+Cross-encoder reranking for relevance
 
-Converting documents into embeddings
+Industry-standard retrieval pipelines
 
-Similarity search using FAISS
+Evaluation & Observability
 
-Injecting retrieved context into prompts for grounded answers
+Measuring known vs unknown
 
-4. Document Ingestion Reality
+Confidence as a heuristic, not truth
 
-Not all PDFs are text-based
+Logging for iterative improvement
 
-Scanned/screenshot PDFs require OCR
+Analytics-driven RAG tuning
 
-RAG quality depends on data quality
+Real Backend Engineering
 
-Silent failures often come from missing extractable text
+API limits & retries
 
-5. Summarization vs Q&A
+Persistent storage
 
-Summarization is not the same as question answering
+Clean Git hygiene
 
-Naive summarization can fail due to token limits
-
-Simpler pipelines are often more stable for small documents
-
-6. Confidence & Trust
-
-Confidence score reflects retrieval strength, not “truth”
-
-Honest responses (“I don’t know”) improve trust
-
-Citations are critical for verification
-
-7. Engineering Best Practices
-
-Start with a stable baseline before adding complexity
-
-Mock LLM responses during development
-
-Handle API quotas and rate limits explicitly
-
-Keep generated files out of Git (.gitignore)
-
-Resolve Git branch divergence safely using rebase
+Incremental system evolution
 
 🛠️ Tech Stack
 Backend
@@ -119,9 +174,11 @@ Python
 
 FastAPI
 
-FAISS
+FAISS (HNSW ANN)
 
 SentenceTransformers
+
+Cross-Encoder (MS MARCO)
 
 Google Gemini API
 
@@ -137,73 +194,49 @@ CSS
 
 Vanilla JavaScript (Fetch API)
 
-Platform & Tooling
+Tooling & Platform
 
 VS Code
 
 Git & GitHub
 
+Docker
+
 Hugging Face Spaces (deployment)
 
 Virtual Environments (venv)
 
-⚙️ Setup Instructions
-1️⃣ Clone the repository
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+⚙️ Setup & Run Locally
 
-2️⃣ Create & activate virtual environment
+1️⃣ Clone Repository
+git clone https://github.com/LVVignesh/gemini-rag-fastapi.git
+cd gemini-rag-fastapi
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-
-3️⃣ Install dependencies
+venv\Scripts\activate
 pip install -r requirements.txt
-
-4️⃣ Set environment variables
-
-Create a .env file:
-
 GEMINI_API_KEY=your_api_key_here
-
-5️⃣ Run the server
 uvicorn main:app --reload
-
-
-Open in browser:
-
-http://127.0.0.1:8000
-
-Test and use my RAG project on Hugging face : https://huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro
-
-🧪 Mock Mode (Development)
-
-To test the UI without consuming Gemini API quota:
-
-Enable mock responses in main.py
-
-Allows frontend and flow testing without LLM calls
-
-This mirrors real production workflows.
 
 ⚠️ Known Limitations
 
-Scanned/image-based PDFs are not supported (OCR required)
+Scanned/image-only PDFs require OCR (not included)
 
-Confidence score is heuristic, not a guarantee of correctness
+Confidence score is heuristic
 
-Large documents may require map-reduce summarization (future work)
+Very large corpora may require:
 
-🔮 Future Improvements
+batch ingestion
 
-OCR integration for scanned PDFs
+sharding
 
-Chunk-based retrieval for large documents
+background workers
 
-Streaming LLM responses
+🚀 Live Demo
 
-Evaluation metrics for answer quality
+👉 Hugging Face Spaces
+https://huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro
 
-Multi-document cross-referencing
+📜 License
 
-Auth & user-specific document stores
+MIT License
+
