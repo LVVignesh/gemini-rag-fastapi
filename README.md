@@ -2,7 +2,7 @@
 
 Production-grade Retrieval-Augmented Generation (RAG) backend built with FastAPI, FAISS (ANN), and Google Gemini — featuring hybrid retrieval, HNSW indexing, cross-encoder reranking, evaluation logging, and analytics.
 
-This repository demonstrates how modern AI backend systems are actually built in industry, not toy demos.
+This repository demonstrates how modern AI backend systems are actually built in industry.
 
 🚀 What This Project Is
 
@@ -96,29 +96,43 @@ Persistent vector store
 
 🏗️ System Architecture
 
+
 Frontend (HTML / JS)
+
         ↓
+
 FastAPI Backend
         ↓
+
 Document Ingestion (PDF / TXT)
         ↓
+
 Sentence Chunking + Metadata
         ↓
+
 Embeddings (SentenceTransformers)
         ↓
+
 FAISS ANN Index (HNSW)
         ↓
+
 Hybrid Retrieval (Vector + Keyword)
         ↓
+
 Cross-Encoder Reranking
         ↓
+
 Prompt Assembly
         ↓
+
 Google Gemini LLM
         ↓
+
 Answer + Confidence + Citations
         ↓
+
 Evaluation Logging + Analytics
+
 
 🧠 Core Concepts Demonstrated
 Retrieval-Augmented Generation (RAG)
@@ -168,6 +182,7 @@ Clean Git hygiene
 Incremental system evolution
 
 🛠️ Tech Stack
+
 Backend
 
 Python
@@ -209,13 +224,29 @@ Virtual Environments (venv)
 ⚙️ Setup & Run Locally
 
 1️⃣ Clone Repository
+
 git clone https://github.com/LVVignesh/gemini-rag-fastapi.git
+
 cd gemini-rag-fastapi
+
+2️⃣ Create Virtual Environment
+
 python -m venv venv
+
 venv\Scripts\activate
+
+3️⃣ Install Dependencies
+
 pip install -r requirements.txt
+
+4️⃣ Configure Environment Variables
+
 GEMINI_API_KEY=your_api_key_here
+
+5️⃣ Run Server
+
 uvicorn main:app --reload
+
 
 ⚠️ Known Limitations
 
