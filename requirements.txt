@@ -7,3 +7,5 @@ sentence-transformers
 pypdf
 numpy
 python-multipart
+
+rank_bm25

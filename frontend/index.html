@@ -43,21 +43,83 @@
       min-height: 100vh;
       background: var(--bg);
       display: flex;
-      justify-content: center;
-      padding: 40px 16px;
       color: var(--text);
-      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Layout */
+    .app_layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: rgba(255, 255, 255, 0.5);
+      /* Glass-ish */
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .main-content {
+      padding: 40px;
+      overflow-y: auto;
+      display: flex;
+      justify-content: center;
     }
 
     .container {
       width: 100%;
       max-width: 800px;
+      /* background: var(--card); Removed container bg for cleaner look in main area */
+      /* border-radius: 24px; */
+      /* padding: 36px; */
+      /* border: 1px solid var(--border); */
+      /* box-shadow: 0 40px 120px rgba(15, 23, 42, .15); */
+    }
+
+    .history-item {
+      padding: 10px 14px;
+      margin-bottom: 8px;
       background: var(--card);
-      backdrop-filter: blur(16px);
-      border-radius: 24px;
-      padding: 36px;
       border: 1px solid var(--border);
-      box-shadow: 0 40px 120px rgba(15, 23, 42, .15);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .sidebar-header {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
     }
 
     h1 {
@@ -73,44 +135,28 @@
     .subtitle {
       margin-top: 8px;
       color: var(--muted);
-      font-size: 1rem;
     }
 
     .card {
       margin-top: 28px;
-      background: var(--card);
-      border-radius: 18px;
       padding: 24px;
+      border-radius: 18px;
       border: 1px solid var(--border);
+      background: var(--card);
     }
 
-    .card h3 {
-      margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 1.1rem;
-    }
-
-    input[type="file"],
-    textarea {
+    textarea,
+    input[type="file"] {
       width: 100%;
       padding: 14px;
       border-radius: 14px;
       border: 1px solid var(--border);
-      font-size: 0.95rem;
       background: var(--card);
       color: var(--text);
     }
 
     textarea {
       min-height: 100px;
-      resize: vertical;
-    }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      margin-top: 12px;
-      flex-wrap: wrap;
     }
 
     button {
@@ -121,43 +167,30 @@
       color: white;
       font-weight: 600;
       cursor: pointer;
-      transition: all .2s ease;
     }
 
     button.secondary {
       background: var(--secondary);
     }
 
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, .2);
-    }
-
-    .status {
-      margin-top: 10px;
-      font-size: .9rem;
-      color: var(--muted);
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
     }
 
     .answer {
       margin-top: 24px;
       padding: 22px;
       border-radius: 16px;
-      background: var(--card);
       border: 1px solid var(--border);
+      background: var(--card);
       line-height: 1.6;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      color: var(--text);
     }
 
     .confidence-badge {
-      display: inline-block;
       margin-top: 12px;
+      display: inline-block;
       padding: 4px 12px;
       border-radius: 20px;
       background: #dcfce7;
@@ -167,184 +200,233 @@
     }
 
     .citations {
-      margin-top: 16px;
-      font-size: .85rem;
+      margin-top: 14px;
+      font-size: 0.85rem;
       color: var(--muted);
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-    }
-
-    .citations ul {
-      margin: 6px 0 0;
-      padding-left: 20px;
-    }
-
-    .loader {
-      font-weight: 600;
-      color: var(--primary);
-      animation: pulse 1.2s infinite;
-    }
-
-    @keyframes pulse {
-      0% {
-        opacity: .4
-      }
-
-      50% {
-        opacity: 1
-      }
-
-      100% {
-        opacity: .4
-      }
-    }
-
-    .theme-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px;
-      cursor: pointer;
-      font-size: 1.4rem;
-      transition: transform 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .theme-toggle:hover {
-      transform: scale(1.1);
     }
   </style>
 </head>
 
 <body>
-  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
-  <div class="container">
-    <h1>Gemini RAG Assistant</h1>
-    <div class="subtitle">Upload documents · Ask questions · Get grounded answers · <a href="/frontend/analytics.html"
-        style="color: var(--primary); text-decoration: none; font-weight: 600;">📊 Analytics</a></div>
-
-    <div class="card">
-      <h3>1. Upload Knowledge</h3>
-      <input type="file" id="files" multiple accept=".pdf,.txt" />
-      <div class="row">
-        <button id="uploadBtn" onclick="upload()">Upload & Index Files</button>
+  <div class="app_layout">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2 style="font-size: 1.2rem; margin:0;">History</h2>
+        <button onclick="clearHistory()"
+          style="background:none; border:none; color:var(--error); cursor:pointer; padding:0; font-size:0.8rem; width:auto; text-decoration:underline; margin:0;">Clear</button>
       </div>
-      <div id="uploadStatus" class="status"></div>
+      <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
+      <div id="historyList"></div>
     </div>
+    <div class="main-content">
+      <div class="container">
+        <h1>Gemini RAG Assistant</h1>
+        <div class="subtitle">
+          Upload documents · Ask questions · Get grounded answers ·
+          <a href="/frontend/analytics.html">📊 Analytics</a>
+        </div>
 
-    <div class="card">
-      <h3>2. Ask or Summarize</h3>
-      <textarea id="question" placeholder="E.g., 'What are the main risks?' or 'Summarize the document'"></textarea>
-      <div class="row">
-        <button id="askBtn" onclick="ask()">Ask Question</button>
-        <button class="secondary" id="sumBtn" onclick="summarize()">Generate Summary</button>
+        <div class="card">
+          <h3>Upload Knowledge</h3>
+          <input type="file" id="files" multiple />
+          <div class="row">
+            <button onclick="upload()">Upload</button>
+          </div>
+
+          <!-- Progress Bar Container -->
+          <div id="progressContainer" style="display: none; margin-top: 16px;">
+            <div style="background: var(--border); border-radius: 8px; overflow: hidden; height: 10px;">
+              <div id="progressBar"
+                style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;">
+              </div>
+            </div>
+            <div id="progressText"
+              style="margin-top: 6px; font-size: 0.85rem; color: var(--muted); text-align: center;">0%
+            </div>
+          </div>
+
+          <div id="uploadStatus" style="margin-top: 12px; font-weight: 500;"></div>
+        </div>
+
+        <div class="card">
+          <h3>Ask or Summarize</h3>
+          <textarea id="question"></textarea>
+          <div class="row">
+            <button onclick="ask()">Ask</button>
+            <button class="secondary" onclick="summarize()">Summarize</button>
+          </div>
+        </div>
+
+        <div id="answerBox" class="answer" style="display:none;"></div>
       </div>
     </div>
-
-    <div id="answerBox" class="answer" style="display:none;"></div>
-
   </div>
 
   <script>
-    // ===== THEME TOGGLE =====
-    function toggleTheme() {
-      const html = document.documentElement;
-      const currentTheme = html.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-      html.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-
-      // Update button icon
-      const btn = document.querySelector('.theme-toggle');
-      btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-    }
-
-    // Load saved theme on page load
-    (function () {
-      const savedTheme = localStorage.getItem('theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      const btn = document.querySelector('.theme-toggle');
-      if (btn) btn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-    })();
-
-    // ===== APP LOGIC =====
-    let busy = false;
-
-    function setBusy(state) {
-      busy = state;
-      document.getElementById("askBtn").disabled = state;
-      document.getElementById("sumBtn").disabled = state;
-      document.getElementById("uploadBtn").disabled = state;
-    }
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
     async function upload() {
-      const files = document.getElementById("files").files;
+      const fileInput = document.getElementById("files");
+      const files = fileInput.files;
+      const statusDiv = document.getElementById("uploadStatus");
+      const progressContainer = document.getElementById("progressContainer");
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+
       if (!files.length) {
-        alert("Please select files first.");
+        alert("Please select at least one file.");
         return;
       }
 
-      setBusy(true);
-      const statusDiv = document.getElementById("uploadStatus");
-      statusDiv.innerText = "Indexing documents... this may take a moment.";
+      // 1. Client-side Validation
+      for (let f of files) {
+        if (f.size > MAX_FILE_SIZE) {
+          alert(`File "${f.name}" is too large (>${MAX_FILE_SIZE / 1024 / 1024}MB). Max allowed is 50MB.`);
+          return;
+        }
+      }
+
+      // Reset UI
+      statusDiv.innerText = "";
+      statusDiv.style.color = "var(--text)";
+      progressContainer.style.display = "block";
+      progressBar.style.width = "0%";
+      progressText.innerText = "0%";
 
       const fd = new FormData();
       for (let f of files) fd.append("files", f);
 
-      try {
-        const res = await fetch("/upload", { method: "POST", body: fd });
-        if (!res.ok) throw new Error("Upload failed");
-        const data = await res.json();
-        statusDiv.innerText = data.message || "Done ✅";
-      } catch (e) {
-        statusDiv.innerText = "Error uploading files.";
-      }
-      setBusy(false);
+      // 2. Upload via XMLHttpRequest for progress events
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          progressBar.style.width = percent + "%";
+          progressText.innerText = percent + "%";
+        }
+      });
+
+
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            statusDiv.innerText = data.message || "Upload complete!";
+            statusDiv.style.color = "var(--success)";
+            progressBar.style.width = "100%";
+            progressText.innerText = "Processing complete";
+            fileInput.value = ""; // Clear input
+          } catch (e) {
+            statusDiv.innerText = "Error parsing server response.";
+            statusDiv.style.color = "var(--error)";
+          }
+        } else {
+          statusDiv.innerText = `Upload failed: ${xhr.statusText || xhr.status}`;
+          statusDiv.style.color = "var(--error)";
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        statusDiv.innerText = "Network error during upload.";
+        statusDiv.style.color = "var(--error)";
+      });
+
+      xhr.open("POST", "/upload");
+      xhr.send(fd);
     }
+
+    // --- HISTORY LOGIC ---
+    function loadHistory() {
+      const list = document.getElementById("historyList");
+      list.innerHTML = "";
+      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
+
+      history.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerText = item.query;
+        div.onclick = () => loadSession(index);
+        list.appendChild(div);
+      });
+    }
+
+    function saveToHistory(query, answerHtml) {
+      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
+      // Prepend new item
+      history.unshift({ query, answerHtml, timestamp: Date.now() });
+      // Keep max 50
+      if (history.length > 50) history.pop();
+
+      localStorage.setItem("rag_history", JSON.stringify(history));
+      loadHistory();
+    }
+
+    function loadSession(index) {
+      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
+      const item = history[index];
+      if (!item) return;
+
+      document.getElementById("question").value = item.query;
+      const box = document.getElementById("answerBox");
+      box.style.display = "block";
+      box.innerHTML = item.answerHtml;
+    }
+
+    function newChat() {
+      document.getElementById("question").value = "";
+      document.getElementById("answerBox").style.display = "none";
+      document.getElementById("answerBox").innerHTML = "";
+    }
+
+    function clearHistory() {
+      if (confirm("Clear all history?")) {
+        localStorage.removeItem("rag_history");
+        loadHistory();
+        newChat();
+      }
+    }
+
+    // Init
+    loadHistory();
 
     async function ask() {
       const q = document.getElementById("question").value.trim();
       if (!q) return;
 
-      setBusy(true);
       const box = document.getElementById("answerBox");
       box.style.display = "block";
-      box.innerHTML = "<span class='loader'>Thinking...</span>";
+      box.innerHTML = "Thinking...";
 
-      try {
-        const res = await fetch("/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: q })
-        });
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: q })
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        let html = `<div><strong>Answer:</strong><br>${data.answer.replace(/\n/g, '<br>')}</div>`;
+      let html = `<strong>Answer:</strong><br>${data.answer.replace(/\n/g, "<br>")}`;
 
-        if (data.confidence > 0) {
-          html += `<div class="confidence-badge">Confidence: ${(data.confidence * 100).toFixed(0)}%</div>`;
-        }
+      if (data.confidence > 0) {
+        let label = "Low";
+        if (data.confidence >= 0.7) label = "High";
+        else if (data.confidence >= 0.5) label = "Medium";
 
-        if (data.citations && data.citations.length > 0) {
-          html += `<div class="citations"><strong>Sources:</strong><ul>`;
-          data.citations.forEach(c => {
-            html += `<li>${c.source} (Page ${c.page})</li>`;
-          });
-          html += `</ul></div>`;
-        }
-
-        box.innerHTML = html;
-
-      } catch (e) {
-        box.innerText = "⚠️ Error communicating with the server.";
+        html += `<div class="confidence-badge">Confidence: ${label} (${Math.round(data.confidence * 100)}%)</div>`;
       }
 
-      setBusy(false);
+      if (data.citations?.length) {
+        html += "<div class='citations'><strong>Sources:</strong><ul>";
+        data.citations.forEach(c => {
+          html += `<li>${c.source} (Page ${c.page})</li>`;
+        });
+        html += "</ul></div>";
+      }
+
+      box.innerHTML = html;
+      saveToHistory(q, html); // Save to history
     }
 
     function summarize() {
