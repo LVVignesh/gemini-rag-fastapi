@@ -19,3 +19,5 @@ data/
 # OS / editor
 .vscode/
 .DS_Store
+verify_log.txt
+verify_out.txt

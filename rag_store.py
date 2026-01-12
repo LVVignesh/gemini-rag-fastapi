@@ -90,13 +90,22 @@ def ingest_documents(files):
 
     for file in files:
         if file.filename.endswith(".pdf"):
-            reader = PdfReader(file.file)
-            for i, page in enumerate(reader.pages):
-                text = page.extract_text()
-                if text:
-                    for chunk in chunk_text(text):
-                        texts.append(chunk)
-                        meta.append({"source": file.filename, "page": i + 1})
+            # Save temp file for pymupdf4llm
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(file.file.read())
+                tmp_path = tmp.name
+            
+            try:
+                # Use pymupdf4llm to extract markdown with tables
+                import pymupdf4llm
+                md_text = pymupdf4llm.to_markdown(tmp_path)
+                
+                for chunk in chunk_text(md_text):
+                    texts.append(chunk)
+                    meta.append({"source": file.filename, "page": "N/A"}) # pymupdf4llm merges pages by default
+            finally:
+                os.remove(tmp_path)
 
         elif file.filename.endswith(".txt"):
             content = file.file.read().decode("utf-8", errors="ignore")

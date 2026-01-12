@@ -264,6 +264,8 @@
 
   <script>
     const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    let threadId = sessionStorage.getItem("rag_thread_id") || crypto.randomUUID();
+    sessionStorage.setItem("rag_thread_id", threadId);
 
     async function upload() {
       const fileInput = document.getElementById("files");
@@ -375,9 +377,10 @@
     }
 
     function newChat() {
-      document.getElementById("question").value = "";
       document.getElementById("answerBox").style.display = "none";
       document.getElementById("answerBox").innerHTML = "";
+      threadId = crypto.randomUUID();
+      sessionStorage.setItem("rag_thread_id", threadId);
     }
 
     function clearHistory() {
@@ -402,7 +405,7 @@
       const res = await fetch("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: q })
+        body: JSON.stringify({ prompt: q, thread_id: threadId })
       });
 
       const data = await res.json();

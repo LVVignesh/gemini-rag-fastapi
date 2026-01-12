@@ -11,6 +11,7 @@ import google.generativeai as genai
 from rag_store import ingest_documents, get_all_chunks, clear_database
 from analytics import get_analytics
 from agentic_rag_v2_graph import build_agentic_rag_v2_graph
+from llm_utils import generate_with_retry
 
 # =========================================================
 # ENV + MODEL
@@ -39,18 +40,7 @@ app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 # =========================================================
 # SECURITY
 # =========================================================
-from fastapi import Request, HTTPException, Depends
-from fastapi.security import APIKeyCookie
 
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "secret")
-COOKIE_NAME = "rag_auth"
-
-api_key_cookie = APIKeyCookie(name=COOKIE_NAME, auto_error=False)
-
-async def verify_admin(cookie: str = Depends(api_key_cookie)):
-    if cookie != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return cookie
 
 # =========================================================
 # STATE
@@ -63,39 +53,28 @@ answer_cache: dict[str, tuple[float, dict]] = {}
 # =========================================================
 class PromptRequest(BaseModel):
     prompt: str
+    thread_id: str = "default"
 
-class LoginRequest(BaseModel):
-    password: str
+
 
 # =========================================================
 # ROUTES
 # =========================================================
-@app.post("/login")
-def login(data: LoginRequest):
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Invalid password")
-    
-    response = JSONResponse(content={"message": "Logged in"})
-    response.set_cookie(key=COOKIE_NAME, value=data.password, httponly=True)
-    return response
 
-@app.get("/me")
-def me(user: str = Depends(verify_admin)):
-    return {"status": "authenticated"}
 
 @app.get("/", response_class=HTMLResponse)
 def serve_ui():
     with open("frontend/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-@app.get("/analytics", dependencies=[Depends(verify_admin)])
+@app.get("/analytics")
 def analytics():
     return get_analytics()
 
 # ---------------------------------------------------------
 # UPLOAD
 # ---------------------------------------------------------
-@app.post("/upload", dependencies=[Depends(verify_admin)])
+@app.post("/upload")
 async def upload(files: list[UploadFile] = File(...)):
     for file in files:
         ext = file.filename.split(".")[-1].lower()
@@ -144,12 +123,15 @@ async def ask(data: PromptRequest):
         context = "\n\n".join(c["text"] for c in chunks)
 
         model = genai.GenerativeModel(MODEL_NAME)
-        resp = model.generate_content(
+        resp = generate_with_retry(
+            model, 
             f"Summarize the following content clearly:\n\n{context}"
         )
+        
+        answer_text = resp.text if resp else "Error generating summary due to quota limits."
 
         response = {
-            "answer": resp.text,
+            "answer": answer_text,
             "confidence": 0.95,
             "citations": []
         }
@@ -161,6 +143,7 @@ async def ask(data: PromptRequest):
     # 🟩 AGENTIC RAG (LLM + EVALUATION)
     # ==========================
     result = agentic_graph.invoke({
+        "messages": [],
         "query": query,
         "refined_query": "",
         "decision": "",
@@ -170,7 +153,7 @@ async def ask(data: PromptRequest):
         "answer": None,
         "confidence": 0.0,
         "answer_known": False
-    })
+    }, config={"configurable": {"thread_id": data.thread_id}})
 
     response = {
         "answer": result["answer"],
