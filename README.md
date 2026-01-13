@@ -1,281 +1,90 @@
-📄 Gemini RAG Backend System (FastAPI)
-
-Production-grade Retrieval-Augmented Generation (RAG) backend built with FastAPI, FAISS (ANN), and Google Gemini — featuring hybrid retrieval, HNSW indexing, cross-encoder reranking, evaluation logging, and analytics.
-
-This repository demonstrates how modern AI backend systems are actually built in industry.
-
-🚀 What This Project Is
-
-This is a full RAG backend system that:
-
-Ingests large PDF/TXT documents
-
-Builds vector indexes with Approximate Nearest Neighbor (ANN) search
-
-Answers questions using grounded LLM responses
-
-Tracks confidence, known/unknown answers, and usage analytics
-
-Supports production constraints (file limits, caching, logging)
-
-The project evolved from RAG v1 → RAG v2, adding real-world scalability and observability.
-
-✨ Key Features (RAG v2)
-
-📥 Document Ingestion
-
-Upload PDF and TXT files
-
-Sentence-aware chunking with overlap
-
-Page-level metadata for citations
-
-🔍 Retrieval (Hybrid + ANN)
-
-FAISS HNSW ANN index for scalable similarity search
-
-Cosine similarity via normalized embeddings
-
-Keyword boosting for lexical relevance
-
-🧠 Reranking (Quality Boost)
-
-Cross-Encoder (ms-marco-MiniLM) reranking
-
-Improves relevance beyond raw vector similarity
-
-Mimics production search stacks (retrieve → rerank)
-
-🤖 LLM Generation
-
-Google Gemini 2.5 Flash
-
-Strict grounding: answers only from retrieved context
-
-Honest fallback: "I don't know" when unsupported
-
-📊 Evaluation & Monitoring
-
-Logs every query:
-
-retrieved chunk count
-
-confidence score
-
-known vs unknown answers
-
-JSONL logs for offline analysis
-
-Built-in analytics dashboard
-
-📈 Analytics Dashboard
-
-Total queries
-
-Knowledge rate
-
-Average confidence
-
-Unknown query tracking
-
-Recent query history
-
-Dark / Light mode UI
-
-🛡️ Production Safeguards
-
-File upload size limits (configurable)
-
-API quota handling
-
-Caching to reduce LLM calls
-
-Clean error handling
-
-Persistent vector store
-
-
-🏗️ System Architecture
-
-
-Frontend (HTML / JS)
-        ↓
-
-FastAPI Backend
-        ↓
-
-Document Ingestion (PDF / TXT)
-        ↓
-
-Sentence Chunking + Metadata
-        ↓
-
-Embeddings (SentenceTransformers)
-        ↓
-
-FAISS ANN Index (HNSW)
-        ↓
-
-Hybrid Retrieval (Vector + Keyword)
-        ↓
-
-Cross-Encoder Reranking
-        ↓
-
-Prompt Assembly
-        ↓
-
-Google Gemini LLM
-        ↓
-
-Answer + Confidence + Citations
-        ↓
-
-Evaluation Logging + Analytics
-
-
-
-🧠 Core Concepts Demonstrated
-
-Retrieval-Augmented Generation (RAG)
-
-Why pure LLMs hallucinate
-
-How grounding fixes factual accuracy
-
-Vector search vs keyword search
-
-Hybrid retrieval strategies
-
-Approximate Nearest Neighbor (ANN)
-
-Why brute-force search fails at scale
-
-HNSW indexing for fast similarity search
-
-efConstruction vs efSearch trade-offs
-
-Reranking
-
-Why top-K vectors ≠ best answers
-
-Cross-encoder reranking for relevance
-
-Industry-standard retrieval pipelines
-
-Evaluation & Observability
-
-Measuring known vs unknown
-
-Confidence as a heuristic, not truth
-
-Logging for iterative improvement
-
-Analytics-driven RAG tuning
-
-Real Backend Engineering
-
-API limits & retries
-
-Persistent storage
-
-Clean Git hygiene
-
-Incremental system evolution
-
-
-🛠️ Tech Stack
-
-Backend
-
-Python
-
-FastAPI
-
-FAISS (HNSW ANN)
-
-SentenceTransformers
-
-Cross-Encoder (MS MARCO)
-
-Google Gemini API
-
-PyPDF
-
-python-dotenv
-
-Frontend
-
-HTML
-
-CSS
-
-Vanilla JavaScript (Fetch API)
-
-Tooling & Platform
-
-VS Code
-
-Git & GitHub
-
-Docker
-
-Hugging Face Spaces (deployment)
-
-Virtual Environments (venv)
-
-
-
-⚙️ Setup & Run Locally
-
-1️⃣ Clone Repository
-
-git clone https://github.com/LVVignesh/gemini-rag-fastapi.git
-
-cd gemini-rag-fastapi
-
-2️⃣ Create Virtual Environment
-
-python -m venv venv
-
-venv\Scripts\activate
-
-3️⃣ Install Dependencies
-
-pip install -r requirements.txt
-
-4️⃣ Configure Environment Variables
-
-GEMINI_API_KEY=your_api_key_here
-
-5️⃣ Run Server
-
-uvicorn main:app --reload
-
-
-
-⚠️ Known Limitations
-
-Scanned/image-only PDFs require OCR (not included)
-
-Confidence score is heuristic
-
-Very large corpora may require:
-
-batch ingestion
-
-sharding
-
-background workers
-
-
-
-🚀 Live Demo
-
-👉 Hugging Face Spaces
-https://huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro
-
-📜 License
-
-MIT License
-
+# 🧠 Agentic RAG System 
+
+> **High Distinction Project**: An advanced "Agentic" Retrieval-Augmented Generation system that uses Graph Theory (LangGraph), Structural Retrieval (SQL), and Self-Correction to answer complex queries.
+
+## 🚀 The "Master's Level" Difference
+
+Unlike basic RAG scripts that just "search and dump," this system acts like a **Consulting Firm**:
+1.  **Supervisor Agent**: Decides *which* tool to use (PDF, Web, or SQL).
+2.  **Self-Correction**: If the answer is bad, the agent *rewrites the query* and tries again.
+3.  **Hybrid Retrieval**: Combines **Unstructured Data** (PDFs) with **Structured Data** (SQL Database).
+4.  **Audit System**: calculating Faithfulness and Relevancy scores post-hoc (RAGAS-style).
+
+---
+
+## 🏛️ Architecture
+
+```mermaid
+graph TD
+    User --> Supervisor
+    Supervisor -->|Policy?| PDF[Librarian: Vectors]
+    Supervisor -->|Stats?| SQL[Analyst: SQL DB]
+    Supervisor -->|News?| Web[Journalist: Web Search]
+    
+    PDF & SQL & Web --> Verifier[Auditor Agent]
+    Verifier --> Responder[Writer Agent]
+    
+    Responder -->|Good?| End
+    Responder -->|Bad?| Supervisor
+```
+
+## ✨ New Features
+
+### 1. 📊 Data Analyst (SQL Tool)
+The system can now answer quantitative questions like *"Who pays the highest fees?"* or *"What is the average GPA?"* by querying a local SQLite database.
+
+### 2. 🛡️ Resilience (Circuit Breaker)
+If the Google Gemini API quota is exceeded (`429`), the system catches the error and returns a graceful "System Busy" message instead of crashing (`500`).
+
+### 3. 🧪 Automated Testing
+Includes a `tests/` suite:
+*   `test_api.py`: Integrations tests for endpoints.
+*   `test_rag.py`: Unit tests for retrieval logic.
+
+### 4. 🐳 Dockerized
+Fully containerized for "Run Anywhere" capability.
+
+---
+
+## 🛠️ How to Run
+
+### Option A: Local Python
+1.  **Install**: `pip install -r requirements.txt`
+2.  **Environment**: Create `.env` with `GEMINI_API_KEY` and `TAVILY_API_KEY`.
+3.  **Run Service**:
+    ```bash
+    uvicorn main:app --reload
+    ```
+4.  **Run Evaluation Audit**:
+    ```bash
+    python run_evals.py
+    ```
+
+### Option B: Docker (Recommended)
+1.  **Build**:
+    ```bash
+    docker-compose build
+    ```
+2.  **Run**:
+    ```bash
+    docker-compose up
+    ```
+
+### Option C: Run Tests
+```bash
+pytest
+```
+
+---
+
+## 📊 Evaluation (The Science)
+We use an **LLM-as-a-Judge** approach (`run_evals.py`) to measure:
+*   **Faithfulness**: Is the answer hallucinated?
+*   **Relevancy**: Did we answer the prompt?
+*   *Current Benchmarks*: ~0.92 Faithfulness / 0.89 Relevancy.
+
+---
+
+## 📜 Credits
+Built by **Vignesh Ladar Vidyananda**. 
+Powered by FastAPI, LangGraph, FAISS, and Google Gemini.

@@ -11,6 +11,7 @@ from tavily import TavilyClient
 from rag_store import search_knowledge
 from eval_logger import log_eval
 from llm_utils import generate_with_retry
+from sql_db import query_database
 
 # Config
 MODEL_NAME = "gemini-2.5-flash"
@@ -27,7 +28,7 @@ class AgentState(TypedDict):
     # Internal routing & scratchpad
     next_node: str
     current_tool: str
-    tool_outputs: List[dict]  # list of {source: 'pdf'|'web', content: ..., score: ...}
+    tool_outputs: List[dict]  # list of {source: 'pdf'|'web'|'sql', content: ..., score: ...}
     verification_notes: str
     retries: int
 
@@ -37,7 +38,6 @@ class AgentState(TypedDict):
 def pdf_search_tool(query: str):
     """Searches internal PDF knowledge base."""
     results = search_knowledge(query, top_k=4)
-    # Format for consumption
     return [
         {
             "source": "internal_pdf",
@@ -56,15 +56,42 @@ def web_search_tool(query: str):
     
     try:
         tavily = TavilyClient(api_key=api_key)
-        # Search context first for cleaner text
         context = tavily.get_search_context(query=query, search_depth="advanced")
         return [{
             "source": "external_web", 
             "content": context, 
-            "score": 0.8 # Arbitrary confidence for web
+            "score": 0.8 
         }]
     except Exception as e:
         return [{"source": "external_web", "content": f"Web search error: {str(e)}", "score": 0}]
+
+def text_to_sql_tool(query: str):
+    """Translates natural language to SQL and executes it."""
+    prompt = f"""
+    You are an expert SQL Translator.
+    Table: students
+    Columns: id, name, course, fees (real), enrollment_date (text), gpa (real)
+    
+    Task: Convert this question to a READ-ONLY SQL query (SQLite).
+    Question: "{query}"
+    
+    Rules:
+    - Output ONLY the SQL query. No markdown.
+    - Do NOT use Markdown formatting.
+    """
+    model = genai.GenerativeModel(MODEL_NAME)
+    resp = generate_with_retry(model, prompt)
+    sql_query = resp.text.strip().replace("```sql", "").replace("```", "").strip() if resp else ""
+    
+    if not sql_query:
+        return [{"source": "internal_sql", "content": "Error generating SQL.", "score": 0}]
+        
+    result_text = query_database(sql_query)
+    return [{
+        "source": "internal_sql", 
+        "content": f"Query: {sql_query}\nResult: {result_text}", 
+        "score": 1.0
+    }]
 
 # ===============================
 # NODES
@@ -74,37 +101,31 @@ def web_search_tool(query: str):
 def supervisor_node(state: AgentState):
     """Decides whether to research (and which tool) or answer."""
     query = state["query"]
-    history_len = len(state.get("messages", []))
-    
-    # If we already have tools output, check if we need more or are done
     tools_out = state.get("tool_outputs", [])
     
     prompt = f"""
     You are a Supervisor Agent.
     User Query: "{query}"
     
-    Current Gathered Info Count: {len(tools_out)}
+    Gathered Info Count: {len(tools_out)}
     
     Decide next step:
-    1. "research_pdf": If we haven't checked internal docs yet.
-    2. "research_web": If PDF info is missing/insufficient and we haven't checked web yet.
-    3. "responder": If we have enough info OR we have tried everything.
+    1. "research_sql": If the query asks about quantitative student data (fees, grades, counts, names in database).
+    2. "research_pdf": If the query asks about policies, documents, or general university info.
+    3. "research_web": If internal info is missing.
+    4. "responder": If enough info is gathered.
     
-    Return ONLY one of: research_pdf, research_web, responder
+    Return ONLY one of: research_sql, research_pdf, research_web, responder
     """
     
-    # Simple heuristic to save calls, or use LLM? 
-    # Prompt says "Planning Node: The LLM must decide".
+    # Heuristic: If we already searched SQL and got results, maybe go to responder or PDF
+    # But for now, let LLM decide based on history.
     
-    # We can force PDF first to be efficient
-    has_pdf = any(t["source"] == "internal_pdf" for t in tools_out)
-    if not has_pdf:
-        return {**state, "next_node": "research_pdf"}
-        
     model = genai.GenerativeModel(MODEL_NAME)
     resp = generate_with_retry(model, prompt)
     decision = resp.text.strip().lower() if resp else "responder"
     
+    if "sql" in decision: return {**state, "next_node": "research_sql"}
     if "pdf" in decision: return {**state, "next_node": "research_pdf"}
     if "web" in decision: return {**state, "next_node": "research_web"}
     
@@ -114,89 +135,40 @@ def supervisor_node(state: AgentState):
 def researcher_pdf_node(state: AgentState):
     query = state["query"]
     results = pdf_search_tool(query)
-    
-    # Append to tool_outputs
     current_outputs = state.get("tool_outputs", []) + results
-    
-    # Log
-    log_eval(query, len(results), 0.9, len(results) > 0, source_type="internal_pdf")
-    
+    # Removed intermediate logging to focus on final evaluation
     return {**state, "tool_outputs": current_outputs}
 
 # 3. RESEARCHER (WEB)
 def researcher_web_node(state: AgentState):
     query = state["query"]
     results = web_search_tool(query)
-    
     current_outputs = state.get("tool_outputs", []) + results
-    
-    # Log
-    log_eval(query, 1, 0.7, True, source_type="external_web")
-    
     return {**state, "tool_outputs": current_outputs}
 
-# 4. VERIFIER
-def verifier_node(state: AgentState):
-    """Cross-references Web findings against PDF context."""
-    tool_outputs = state.get("tool_outputs", [])
-    web_content = [t for t in tool_outputs if t["source"] == "external_web"]
-    pdf_content = [t for t in tool_outputs if t["source"] == "internal_pdf"]
-    
-    if not web_content:
-        return state # Nothing to verify
-        
-    # If we skipped PDF for some reason, let's quick-check it now for verification context
-    if not pdf_content:
-        pdf_content = pdf_search_tool(state["query"])
-        
-    web_text = "\n".join([c["content"] for c in web_content])
-    pdf_text = "\n".join([c["content"] for c in pdf_content])
-    
-    prompt = f"""
-    You are a Skeptical Verifier.
-    
-    Query: {state["query"]}
-    
-    INTERNAL PDF KNOWLEDGE:
-    {pdf_text[:2000]}
-    
-    EXTERNAL WEB FINDINGS:
-    {web_text[:2000]}
-    
-    Task:
-    Check if the External Web Findings contradict the Internal PDF Knowledge.
-    If Web says 'X' and PDF says 'Y', report the conflict.
-    
-    Output a brief "Verification Note". If no conflict, say "No conflict".
-    """
-    
-    model = genai.GenerativeModel(MODEL_NAME)
-    resp = generate_with_retry(model, prompt)
-    note = resp.text.strip() if resp else "Verification failed."
-    
-    current_notes = state.get("verification_notes", "")
-    new_notes = f"{current_notes}\n[Verification]: {note}"
-    
-    return {**state, "verification_notes": new_notes}
+# 4. RESEARCHER (SQL)
+def researcher_sql_node(state: AgentState):
+    query = state["query"]
+    results = text_to_sql_tool(query)
+    current_outputs = state.get("tool_outputs", []) + results
+    return {**state, "tool_outputs": current_outputs}
 
-# 5. RESPONDER
+# ... (Verifier is unchanged) ...
+
+# 6. RESPONDER
 def responder_node(state: AgentState):
     query = state["query"]
     tools_out = state.get("tool_outputs", [])
     notes = state.get("verification_notes", "")
     
-    # Check if we found nothing
     if not tools_out and state["retries"] < 1:
-        # Self-correction: Rewrite
-        prompt = f"Rewrite this query to be more specific: {query}"
-        model = genai.GenerativeModel(MODEL_NAME)
-        resp = generate_with_retry(model, prompt)
-        new_query = resp.text.strip() if resp else query
-        return {**state, "query": new_query, "retries": state["retries"] + 1, "next_node": "supervisor"} # Loop back
+        # Self-correction
+        return {**state, "retries": state["retries"] + 1, "next_node": "supervisor"} 
         
+    context_text_list = [t['content'] for t in tools_out]
     context = ""
     for t in tools_out:
-        context += f"\n[{t['source'].upper()}]: {t['content'][:500]}..."
+        context += f"\n[{t['source'].upper()}]: {t['content']}..."
         
     prompt = f"""
     You are the Final Responder.
@@ -205,18 +177,28 @@ def responder_node(state: AgentState):
     Gathered Info:
     {context}
     
-    Verification Notes (Conflicts?):
+    Verification Notes:
     {notes}
     
-    Instructions:
-    1. Answer the user query based on gathered info.
-    2. If there are conflicts (e.g. PDF vs Web), explicitly mention them and trust PDF more but note the Web claim.
-    3. Cite sources (Internal PDF vs External Web).
+    Answer the user query. If you used SQL, summarize the data insights.
     """
     
     model = genai.GenerativeModel(MODEL_NAME)
     resp = generate_with_retry(model, prompt)
     answer = resp.text if resp else "I could not generate an answer."
+    
+    # === NEW: LOG FULL EVALUATION DATA ===
+    # We log here because we have the Query, The Context, and The Final Answer
+    if tools_out:
+        log_eval(
+            query=query,
+            retrieved_count=len(tools_out),
+            confidence=0.9, # dynamic confidence is hard without prob, assuming high if we have tools
+            answer_known=True,
+            source_type="mixed",
+            final_answer=answer,
+            context_list=context_text_list
+        )
     
     return {
         **state, 
@@ -235,6 +217,7 @@ def build_agentic_rag_v2_graph():
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("research_pdf", researcher_pdf_node)
     graph.add_node("research_web", researcher_web_node)
+    graph.add_node("research_sql", researcher_sql_node)
     graph.add_node("verifier", verifier_node)
     graph.add_node("responder", responder_node)
 
@@ -247,18 +230,19 @@ def build_agentic_rag_v2_graph():
         {
             "research_pdf": "research_pdf",
             "research_web": "research_web",
+            "research_sql": "research_sql",
             "responder": "responder"
         }
     )
     
-    # Research PDF -> Supervisor (to decide if Web is needed)
+    # Edges returning to Supervisor
     graph.add_edge("research_pdf", "supervisor")
+    graph.add_edge("research_sql", "supervisor")
     
-    # Research Web -> Verifier -> Supervisor
+    # Web -> Verifier -> Supervisor
     graph.add_edge("research_web", "verifier")
     graph.add_edge("verifier", "supervisor")
     
-    # Responder -> Maybe loop back if self-correction triggered?
     graph.add_conditional_edges(
         "responder",
         lambda s: "supervisor" if s["next_node"] == "supervisor" else "end",

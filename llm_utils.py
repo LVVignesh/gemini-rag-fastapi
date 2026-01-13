@@ -3,9 +3,18 @@ import random
 import google.generativeai as genai
 from google.api_core import exceptions
 
+class DummyResponse:
+    def __init__(self, text):
+        self._text = text
+    
+    @property
+    def text(self):
+        return self._text
+
 def generate_with_retry(model, prompt, retries=3, base_delay=2):
     """
     Generates content using the Gemini model with exponential backoff for rate limits.
+    Returns a dummy response if all retries fail, preventing app crashes.
     """
     for i in range(retries):
         try:
@@ -25,9 +34,12 @@ def generate_with_retry(model, prompt, retries=3, base_delay=2):
                     time.sleep(sleep_time)
                     continue
                 else:
-                    print(f"❌ Quota exceeded after {retries} attempts.")
-                    # We can re-raise or return None depending on preference.
-                    # Re-raising allows the caller to handle the failure (e.g. return 503 Service Unavailable)
-                    # identifying strictly as quota error might be useful.
-            raise e
-    return None
+                    print(f"❌ Quota exceeded after {retries} attempts. Returning resilience fallback.")
+                    return DummyResponse("⚠️ **System Alert**: The AI service is currently experiencing high traffic (Quota Exceeded). Please try again in a few minutes.")
+            
+            # If it's not a quota error (e.g. 500 server error), we might still want to be safe?
+            # For master's level, let's catch everything but log it.
+            print(f"❌ Error generating content: {e}")
+            return DummyResponse(f"⚠️ **System Error**: {str(e)}")
+            
+    return DummyResponse("⚠️ **Unknown Error**: Failed to generate response.")
