@@ -8,10 +8,11 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-from rag_store import ingest_documents, get_all_chunks, clear_database
+from rag_store import ingest_documents, get_all_chunks, clear_database, search_knowledge
 from analytics import get_analytics
 from agentic_rag_v2_graph import build_agentic_rag_v2_graph
 from llm_utils import generate_with_retry
+import asyncio
 
 # =========================================================
 # ENV + MODEL
@@ -19,6 +20,7 @@ from llm_utils import generate_with_retry
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+MOCK_MODE = False  # Refactor complete - enabling real agent
 MODEL_NAME = "gemini-2.5-flash"
 MAX_FILE_SIZE = 50 * 1024 * 1024
 CACHE_TTL = 300
@@ -116,6 +118,49 @@ async def ask(data: PromptRequest):
             return cached
 
     # ==========================
+    # 🟧 MOCK MODE (NO API)
+    # ==========================
+    if MOCK_MODE:
+        await asyncio.sleep(0.5)  # Simulate latency
+        
+        mock_answer = ""
+        mock_citations = []
+        
+        if "summary" in key or "summarize" in key:
+            # Local summary mock
+            chunks = get_all_chunks(limit=3)
+            mock_answer = "⚠️ **MOCK SUMMARY** ⚠️\n\n(API Quota Exhausted - Showing direct database content)\n\n"
+            for c in chunks:
+                # Show full text to avoid breaking markdown tables
+                mock_answer += f"### Chunk from {c['metadata']['source']}\n{c['text']}\n\n---\n\n"
+        else:
+            # Local retrieval mock
+            retrieved = search_knowledge(query)
+            mock_answer = "⚠️ **MOCK RESPONSE** ⚠️\n\n(API Quota Exhausted)\n\nI found the following relevant information in your documents using local search (Exact text match):\n\n"
+            
+            seen_sources = set()
+            for r in retrieved:
+                # Add citation
+                meta = r["metadata"]
+                if (meta["source"], meta["page"]) not in seen_sources:
+                     mock_citations.append(meta)
+                     seen_sources.add((meta["source"], meta["page"]))
+                
+                # Show full text of the relevant chunk
+                mock_answer += f"> **Source: {meta['source']}**\n\n{r['text']}\n\n---\n"
+            
+            if not retrieved:
+                mock_answer += "No relevant documents found in the local index."
+
+        response = {
+            "answer": mock_answer,
+            "confidence": 0.85,
+            "citations": mock_citations
+        }
+        answer_cache[key] = (now, response)
+        return response
+
+    # ==========================
     # 🟦 SUMMARY (BYPASS AGENT)
     # ==========================
     if "summary" in key or "summarize" in key:
@@ -142,27 +187,48 @@ async def ask(data: PromptRequest):
     # ==========================
     # 🟩 AGENTIC RAG (LLM + EVALUATION)
     # ==========================
-    result = agentic_graph.invoke({
+    # ==========================
+    # 🟩 AGENTIC RAG (MULTI-TOOL SUPERVISOR)
+    # ==========================
+    # Initialize state for new graph
+    initial_state = {
         "messages": [],
         "query": query,
-        "refined_query": "",
-        "decision": "",
-        "retrieved_chunks": [],
-        "retrieval_quality": "",
-        "retries": 0,
-        "answer": None,
-        "confidence": 0.0,
-        "answer_known": False
-    }, config={"configurable": {"thread_id": data.thread_id}})
-
-    response = {
-        "answer": result["answer"],
-        "confidence": result["confidence"],
-        "citations": list({
-            (c["metadata"]["source"], c["metadata"]["page"]): c["metadata"]
-            for c in result.get("retrieved_chunks", [])
-        }.values())
+        "final_answer": "",
+        "next_node": "",
+        "current_tool": "",
+        "tool_outputs": [],
+        "verification_notes": "",
+        "retries": 0
     }
+    
+    try:
+        result = agentic_graph.invoke(initial_state, config={"configurable": {"thread_id": data.thread_id}})
+        
+        # Extract citations from tool outputs
+        citations = []
+        seen = set()
+        for t in result.get("tool_outputs", []):
+            src = t.get("source", "unknown")
+            # If it's a PDF, it has metadata
+            if src == "internal_pdf":
+                meta = t.get("metadata", {})
+                key_ = (meta.get("source"), meta.get("page"))
+                if key_ not in seen:
+                    citations.append(meta)
+                    seen.add(key_)
+            # If it's Web, just cite the source
+            elif src == "external_web":
+                citations.append({"source": "Tavily Web Search", "page": "Web"})
 
-    answer_cache[key] = (now, response)
-    return response
+        response = {
+            "answer": result.get("final_answer", "No answer produced."),
+            "confidence": 0.9 if result.get("tool_outputs") else 0.1,
+            "citations": citations
+        }
+        
+        answer_cache[key] = (now, response)
+        return response
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"Agent execution failed: {str(e)}"})
