@@ -1,442 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gemini RAG Assistant</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <style>
-    :root {
-      --bg: radial-gradient(1200px 600px at top, #e0e7ff 0%, #f8fafc 60%);
-      --card: rgba(255, 255, 255, 0.9);
-      --border: rgba(15, 23, 42, 0.08);
-      --primary: #4f46e5;
-      --secondary: #0ea5e9;
-      --text: #0f172a;
-      --muted: #64748b;
-      --error: #dc2626;
-      --success: #16a34a;
-    }
-
-    [data-theme="dark"] {
-      --bg: radial-gradient(1200px 600px at top, #1e1b4b 0%, #0f172a 60%);
-      --card: rgba(30, 41, 59, 0.9);
-      --border: rgba(148, 163, 184, 0.1);
-      --primary: #818cf8;
-      --secondary: #38bdf8;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --error: #f87171;
-      --success: #4ade80;
-    }
-
-    * {
-      box-sizing: border-box;
-      font-family: Inter, sans-serif;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: var(--bg);
-      display: flex;
-      color: var(--text);
-    }
-
-    /* Layout */
-    .app_layout {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      width: 100%;
-      height: 100vh;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: rgba(255, 255, 255, 0.5);
-      /* Glass-ish */
-      backdrop-filter: blur(12px);
-      border-right: 1px solid var(--border);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      overflow-y: auto;
-    }
-
-    .main-content {
-      padding: 40px;
-      overflow-y: auto;
-      display: flex;
-      justify-content: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 800px;
-      /* background: var(--card); Removed container bg for cleaner look in main area */
-      /* border-radius: 24px; */
-      /* padding: 36px; */
-      /* border: 1px solid var(--border); */
-      /* box-shadow: 0 40px 120px rgba(15, 23, 42, .15); */
-    }
-
-    .history-item {
-      padding: 10px 14px;
-      margin-bottom: 8px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .history-item:hover {
-      background: var(--primary);
-      color: white;
-    }
-
-    .sidebar-header {
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .new-chat-btn {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 20px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      margin: 0;
-      font-weight: 700;
-      background: linear-gradient(135deg, #4f46e5, #06b6d4);
-      background-clip: text;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      color: var(--muted);
-    }
-
-    .card {
-      margin-top: 28px;
-      padding: 24px;
-      border-radius: 18px;
-      border: 1px solid var(--border);
-      background: var(--card);
-    }
-
-    textarea,
-    input[type="file"] {
-      width: 100%;
-      padding: 14px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-    }
-
-    textarea {
-      min-height: 100px;
-    }
-
-    button {
-      padding: 12px 24px;
-      border-radius: 14px;
-      border: none;
-      background: var(--primary);
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    button.secondary {
-      background: var(--secondary);
-    }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .answer {
-      margin-top: 24px;
-      padding: 22px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      line-height: 1.6;
-    }
-
-    .confidence-badge {
-      margin-top: 12px;
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      background: #dcfce7;
-      color: #166534;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .citations {
-      margin-top: 14px;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-  </style>
+  <!-- CSS -->
+  <link rel="stylesheet" href="/frontend/style.css">
 </head>
 
 <body>
-  <div class="app_layout">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h2 style="font-size: 1.2rem; margin:0;">History</h2>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">Gemini RAG</div>
+
+      <button class="new-chat-btn" onclick="newChat()">
+        <span>+</span> New Chat
+      </button>
+
+      <div class="history-list" id="historyList">
+        <!-- History items injected by JS -->
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="/frontend/analytics.html" style="font-size: 0.9rem; color: var(--text-muted);">📊 Analytics
+          Dashboard</a>
         <button onclick="clearHistory()"
-          style="background:none; border:none; color:var(--error); cursor:pointer; padding:0; font-size:0.8rem; width:auto; text-decoration:underline; margin:0;">Clear</button>
+          style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem;">Clear
+          All</button>
       </div>
-      <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
-      <div id="historyList"></div>
-    </div>
-    <div class="main-content">
-      <div class="container">
-        <h1>Gemini RAG Assistant</h1>
-        <div class="subtitle">
-          Upload documents · Ask questions · Get grounded answers ·
-          <a href="/frontend/analytics.html">📊 Analytics</a>
-        </div>
+    </aside>
 
-        <div class="card">
-          <h3>Upload Knowledge</h3>
-          <input type="file" id="files" multiple />
-          <div class="row">
-            <button onclick="upload()">Upload</button>
-          </div>
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent">
 
-          <!-- Progress Bar Container -->
-          <div id="progressContainer" style="display: none; margin-top: 16px;">
-            <div style="background: var(--border); border-radius: 8px; overflow: hidden; height: 10px;">
-              <div id="progressBar"
-                style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;">
-              </div>
-            </div>
-            <div id="progressText"
-              style="margin-top: 6px; font-size: 0.85rem; color: var(--muted); text-align: center;">0%
-            </div>
-          </div>
-
-          <div id="uploadStatus" style="margin-top: 12px; font-weight: 500;"></div>
-        </div>
-
-        <div class="card">
-          <h3>Ask or Summarize</h3>
-          <textarea id="question"></textarea>
-          <div class="row">
-            <button onclick="ask()">Ask</button>
-            <button class="secondary" onclick="summarize()">Summarize</button>
-          </div>
-        </div>
-
-        <div id="answerBox" class="answer" style="display:none;"></div>
+      <!-- TOP BAR (Theme Toggle) -->
+      <div class="top-bar">
+        <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark Mode">
+          <!-- Icon injected by JS -->
+        </button>
       </div>
-    </div>
+
+      <!-- CHAT AREA -->
+      <div class="chat-container" id="chatContainer">
+        <!-- Messages injected by JS -->
+      </div>
+
+      <!-- INPUT AREA (Floating) -->
+      <div class="input-area glass input-card">
+
+        <div class="file-row">
+          <label class="file-upload-label" for="files">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 1.83 6 1.83 0 0 1-2.59-2.59l8.6-8.6a4 1.83 4 1.83 0 0 1 2.59 2.59l-8.6 8.6a2 1.83 2 1.83 0 0 1-2.59-2.59l9.19-9.19">
+              </path>
+            </svg>
+            Upload Documents (PDF/TXT)
+          </label>
+          <div id="uploadStatus" style="font-size: 0.8rem; margin-left: auto;"></div>
+        </div>
+
+        <input type="file" id="files" multiple onchange="upload()">
+
+        <div class="progress-container">
+          <div class="progress-bar"></div>
+        </div>
+
+        <div class="textarea-wrapper">
+          <textarea id="question" placeholder="Ask a question or type 'Summarize'..."
+            onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" onclick="ask()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+    </main>
   </div>
 
-  <script>
-    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-    let threadId = sessionStorage.getItem("rag_thread_id") || crypto.randomUUID();
-    sessionStorage.setItem("rag_thread_id", threadId);
-
-    async function upload() {
-      const fileInput = document.getElementById("files");
-      const files = fileInput.files;
-      const statusDiv = document.getElementById("uploadStatus");
-      const progressContainer = document.getElementById("progressContainer");
-      const progressBar = document.getElementById("progressBar");
-      const progressText = document.getElementById("progressText");
-
-      if (!files.length) {
-        alert("Please select at least one file.");
-        return;
-      }
-
-      // 1. Client-side Validation
-      for (let f of files) {
-        if (f.size > MAX_FILE_SIZE) {
-          alert(`File "${f.name}" is too large (>${MAX_FILE_SIZE / 1024 / 1024}MB). Max allowed is 50MB.`);
-          return;
-        }
-      }
-
-      // Reset UI
-      statusDiv.innerText = "";
-      statusDiv.style.color = "var(--text)";
-      progressContainer.style.display = "block";
-      progressBar.style.width = "0%";
-      progressText.innerText = "0%";
-
-      const fd = new FormData();
-      for (let f of files) fd.append("files", f);
-
-      // 2. Upload via XMLHttpRequest for progress events
-      const xhr = new XMLHttpRequest();
-
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          progressBar.style.width = percent + "%";
-          progressText.innerText = percent + "%";
-        }
-      });
-
-
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText);
-            statusDiv.innerText = data.message || "Upload complete!";
-            statusDiv.style.color = "var(--success)";
-            progressBar.style.width = "100%";
-            progressText.innerText = "Processing complete";
-            fileInput.value = ""; // Clear input
-          } catch (e) {
-            statusDiv.innerText = "Error parsing server response.";
-            statusDiv.style.color = "var(--error)";
-          }
-        } else {
-          statusDiv.innerText = `Upload failed: ${xhr.statusText || xhr.status}`;
-          statusDiv.style.color = "var(--error)";
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        statusDiv.innerText = "Network error during upload.";
-        statusDiv.style.color = "var(--error)";
-      });
-
-      xhr.open("POST", "/upload");
-      xhr.send(fd);
-    }
-
-    // --- HISTORY LOGIC ---
-    function loadHistory() {
-      const list = document.getElementById("historyList");
-      list.innerHTML = "";
-      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
-
-      history.forEach((item, index) => {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerText = item.query;
-        div.onclick = () => loadSession(index);
-        list.appendChild(div);
-      });
-    }
-
-    function saveToHistory(query, answerHtml) {
-      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
-      // Prepend new item
-      history.unshift({ query, answerHtml, timestamp: Date.now() });
-      // Keep max 50
-      if (history.length > 50) history.pop();
-
-      localStorage.setItem("rag_history", JSON.stringify(history));
-      loadHistory();
-    }
-
-    function loadSession(index) {
-      const history = JSON.parse(localStorage.getItem("rag_history") || "[]");
-      const item = history[index];
-      if (!item) return;
-
-      document.getElementById("question").value = item.query;
-      const box = document.getElementById("answerBox");
-      box.style.display = "block";
-      box.innerHTML = item.answerHtml;
-    }
-
-    function newChat() {
-      document.getElementById("answerBox").style.display = "none";
-      document.getElementById("answerBox").innerHTML = "";
-      threadId = crypto.randomUUID();
-      sessionStorage.setItem("rag_thread_id", threadId);
-    }
-
-    function clearHistory() {
-      if (confirm("Clear all history?")) {
-        localStorage.removeItem("rag_history");
-        loadHistory();
-        newChat();
-      }
-    }
-
-    // Init
-    loadHistory();
-
-    async function ask() {
-      const q = document.getElementById("question").value.trim();
-      if (!q) return;
-
-      const box = document.getElementById("answerBox");
-      box.style.display = "block";
-      box.innerHTML = "Thinking...";
-
-      const res = await fetch("/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: q, thread_id: threadId })
-      });
-
-      const data = await res.json();
-
-      let html = `<strong>Answer:</strong><br>${data.answer.replace(/\n/g, "<br>")}`;
-
-      if (data.confidence > 0) {
-        let label = "Low";
-        if (data.confidence >= 0.7) label = "High";
-        else if (data.confidence >= 0.5) label = "Medium";
-
-        html += `<div class="confidence-badge">Confidence: ${label} (${Math.round(data.confidence * 100)}%)</div>`;
-      }
-
-      if (data.citations?.length) {
-        html += "<div class='citations'><strong>Sources:</strong><ul>";
-        data.citations.forEach(c => {
-          html += `<li>${c.source} (Page ${c.page})</li>`;
-        });
-        html += "</ul></div>";
-      }
-
-      box.innerHTML = html;
-      saveToHistory(q, html); // Save to history
-    }
-
-    function summarize() {
-      document.getElementById("question").value = "Summarize the uploaded documents";
-      ask();
-    }
-  </script>
+  <!-- JS -->
+  <script src="/frontend/script.js"></script>
 </body>
 
 </html>

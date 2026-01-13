@@ -9,3 +9,4 @@ numpy
 python-multipart
 
 rank_bm25
+tavily-python
