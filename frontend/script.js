@@ -239,7 +239,7 @@ function loadSession(item) {
 
 function newChat() {
     document.getElementById("chatContainer").innerHTML = "";
-    addMessage("ai", "Hello! I am your Agentic RAG Assistant. Upload a document or ask me anything.");
+    addMessage("ai", "Hello! I am NexusGraph AI. Upload a document or ask me anything.");
     threadId = crypto.randomUUID();
     sessionStorage.setItem("rag_thread_id", threadId);
 }

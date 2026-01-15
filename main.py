@@ -28,7 +28,7 @@ CACHE_TTL = 300
 # =========================================================
 # APP
 # =========================================================
-app = FastAPI(title="Gemini RAG FastAPI (Agentic RAG v2+)")
+app = FastAPI(title="NexusGraph AI (Enterprise RAG)")
 
 app.add_middleware(
     CORSMiddleware,
