@@ -1,5 +1,5 @@
 ---
-title: Gemini Rag Fastapi Pro
+title: NexusGraph AI
 emoji: 🧠
 colorFrom: blue
 colorTo: indigo
@@ -7,17 +7,18 @@ sdk: docker
 pinned: false
 ---
 
-# 🧠 Agentic RAG System 
+# 🧠 NexusGraph AI 
 
 > **High Distinction Project**: An advanced "Agentic" Retrieval-Augmented Generation system that uses Graph Theory (LangGraph), Structural Retrieval (SQL), and Self-Correction to answer complex queries.
 
 ## 🚀 The "Master's Level" Difference
 
 Unlike basic RAG scripts that just "search and dump," this system acts like a **Consulting Firm**:
-1.  **Supervisor Agent**: Decides *which* tool to use (PDF, Web, or SQL).
-2.  **Self-Correction**: If the answer is bad, the agent *rewrites the query* and tries again.
-3.  **Hybrid Retrieval**: Combines **Unstructured Data** (PDFs) with **Structured Data** (SQL Database).
-4.  **Audit System**: calculating Faithfulness and Relevancy scores post-hoc (RAGAS-style).
+1.  **Supervisor Agent (Hybrid)**: Uses **Gemini 2.5 Flash Lite** (Fast) to decide *which* tool to use (PDF, Web, or SQL).
+2.  **Responder Agent (Expert)**: Uses **Gemini 3 Flash Preview** (Smart) to synthesize the final answer.
+3.  **Self-Correction**: If the answer is bad, the agent *rewrites the query* and tries again.
+4.  **Hybrid Retrieval**: Combines **Unstructured Data** (PDFs) with **Structured Data** (SQL Database).
+5.  **Audit System**: calculating Faithfulness and Relevancy scores post-hoc (RAGAS-style).
 
 ---
 
@@ -45,12 +46,20 @@ The system can now answer quantitative questions like *"Who pays the highest fee
 ### 2. 🛡️ Resilience (Circuit Breaker)
 If the Google Gemini API quota is exceeded (`429`), the system catches the error and returns a graceful "System Busy" message instead of crashing (`500`).
 
-### 3. 🧪 Automated Testing
+### 3. ⚖️ Hybrid Agent Architecture
+Optimized for Speed and Intelligence:
+*   **Routing**: Handled by lightweight `gemini-2.5-flash-lite`.
+*   **Reasoning**: Handled by powerful `gemini-3-flash-preview`.
+
+### 4. 🚀 CI/CD Pipeline
+Automated deployment from GitHub to Hugging Face using **GitHub Actions**. Commits to `main` are instantly verified and deployed to production.
+
+### 5. 🧪 Automated Testing
 Includes a `tests/` suite:
 *   `test_api.py`: Integrations tests for endpoints.
 *   `test_rag.py`: Unit tests for retrieval logic.
 
-### 4. 🐳 Dockerized
+### 6. 🐳 Dockerized
 Fully containerized for "Run Anywhere" capability.
 
 ---
