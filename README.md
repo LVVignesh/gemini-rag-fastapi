@@ -1,11 +1,10 @@
----
+
 title: Gemini Rag Fastapi Pro
 emoji: 🧠
 colorFrom: blue
 colorTo: indigo
 sdk: docker
 pinned: false
----
 
 # 🧠 Agentic RAG System 
 
