@@ -1,0 +1,22 @@
+name: Sync to Hugging Face Hub
+on:
+  push:
+    branches: [main]
+
+  # to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+      - name: Push to hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # REPLACE 'YOUR_HF_USERNAME/YOUR_SPACE_NAME' BELOW with your actual space path
+        # Example: git push https://lvvignesh:$HF_TOKEN@huggingface.co/spaces/lvvignesh/my-rag-app main
+        run: git push https://lvvignesh2122:$HF_TOKEN@huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro main
