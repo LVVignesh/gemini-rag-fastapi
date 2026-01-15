@@ -99,11 +99,17 @@ def ingest_documents(files):
             try:
                 # Use pymupdf4llm to extract markdown with tables
                 import pymupdf4llm
-                md_text = pymupdf4llm.to_markdown(tmp_path)
+                # Get list of dicts: [{'text': '...', 'metadata': {'page': 1, ...}}]
+                pages_data = pymupdf4llm.to_markdown(tmp_path, page_chunks=True)
                 
-                for chunk in chunk_text(md_text):
-                    texts.append(chunk)
-                    meta.append({"source": file.filename, "page": "N/A"}) # pymupdf4llm merges pages by default
+                for page_obj in pages_data:
+                    p_text = page_obj["text"]
+                    p_num = page_obj["metadata"].get("page", "N/A")
+                    
+                    # Chunk within the page to preserve page context
+                    for chunk in chunk_text(p_text):
+                        texts.append(chunk)
+                        meta.append({"source": file.filename, "page": p_num})
             finally:
                 os.remove(tmp_path)
 

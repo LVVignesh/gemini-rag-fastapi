@@ -14,7 +14,8 @@ from llm_utils import generate_with_retry
 from sql_db import query_database
 
 # Config
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_FAST = "gemini-2.5-flash-lite"
+MODEL_SMART = "gemini-3-flash-preview"
 MAX_RETRIES = 2
 
 # ===============================
@@ -79,7 +80,7 @@ def text_to_sql_tool(query: str):
     - Output ONLY the SQL query. No markdown.
     - Do NOT use Markdown formatting.
     """
-    model = genai.GenerativeModel(MODEL_NAME)
+    model = genai.GenerativeModel(MODEL_SMART)
     resp = generate_with_retry(model, prompt)
     sql_query = resp.text.strip().replace("```sql", "").replace("```", "").strip() if resp else ""
     
@@ -121,7 +122,7 @@ def supervisor_node(state: AgentState):
     # Heuristic: If we already searched SQL and got results, maybe go to responder or PDF
     # But for now, let LLM decide based on history.
     
-    model = genai.GenerativeModel(MODEL_NAME)
+    model = genai.GenerativeModel(MODEL_FAST)
     resp = generate_with_retry(model, prompt)
     decision = resp.text.strip().lower() if resp else "responder"
     
@@ -153,7 +154,38 @@ def researcher_sql_node(state: AgentState):
     current_outputs = state.get("tool_outputs", []) + results
     return {**state, "tool_outputs": current_outputs}
 
-# ... (Verifier is unchanged) ...
+# 5. VERIFIER
+def verifier_node(state: AgentState):
+    """Verifies the quality of gathered information."""
+    query = state["query"]
+    tools_out = state.get("tool_outputs", [])
+    
+    # Simple verification logic
+    context = ""
+    for t in tools_out:
+        context += f"\n[{t['source'].upper()}]: {t['content']}..."
+
+    prompt = f"""
+    You are a Verifier Agent.
+    User Query: "{query}"
+    
+    Gathered Info:
+    {context}
+    
+    Task:
+    Analyze the gathered information. 
+    - Is it relevant to the query?
+    - Are there conflicts?
+    - What key details are present?
+    
+    Provide concise verification notes for the Final Responder.
+    """
+    
+    model = genai.GenerativeModel(MODEL_SMART)
+    resp = generate_with_retry(model, prompt)
+    notes = resp.text if resp else "Verification completed."
+    
+    return {**state, "verification_notes": notes}
 
 # 6. RESPONDER
 def responder_node(state: AgentState):
@@ -183,7 +215,7 @@ def responder_node(state: AgentState):
     Answer the user query. If you used SQL, summarize the data insights.
     """
     
-    model = genai.GenerativeModel(MODEL_NAME)
+    model = genai.GenerativeModel(MODEL_SMART)
     resp = generate_with_retry(model, prompt)
     answer = resp.text if resp else "I could not generate an answer."
     

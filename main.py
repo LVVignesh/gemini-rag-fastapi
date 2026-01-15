@@ -21,7 +21,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 MOCK_MODE = False  # Refactor complete - enabling real agent
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 MAX_FILE_SIZE = 50 * 1024 * 1024
 CACHE_TTL = 300
 
@@ -79,8 +79,12 @@ def analytics():
 @app.post("/upload")
 async def upload(files: list[UploadFile] = File(...)):
     for file in files:
-        ext = file.filename.split(".")[-1].lower()
+        filename = file.filename
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+        print(f"🔍 DEBUG: Uploading '{filename}' (Ext: {ext})")
+
         if ext not in ["pdf", "txt"]:
+            print(f"❌ REJECTED: Invalid extension '{ext}'")
             return JSONResponse(
                 status_code=400,
                 content={"error": "Only PDF and TXT files allowed"}

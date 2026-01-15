@@ -11,7 +11,7 @@ class DummyResponse:
     def text(self):
         return self._text
 
-def generate_with_retry(model, prompt, retries=3, base_delay=2):
+def generate_with_retry(model, prompt, retries=5, base_delay=4):
     """
     Generates content using the Gemini model with exponential backoff for rate limits.
     Returns a dummy response if all retries fail, preventing app crashes.

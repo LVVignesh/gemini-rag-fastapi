@@ -1,4 +1,7 @@
 import asyncio
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from agentic_rag_v2_graph import build_agentic_rag_v2_graph
 
 async def main():
@@ -21,7 +24,7 @@ async def main():
     }
     
     result = await graph.ainvoke(inputs, config=config)
-    print(f"Answer 1: {result['answer']}")
+    print(f"Answer 1: {result['final_answer']}")
     
     print("\n--- Turn 2 ---")
     inputs["query"] = "What is my name?"
@@ -33,7 +36,7 @@ async def main():
     inputs["messages"] = []
     
     result = await graph.ainvoke(inputs, config=config)
-    print(f"Answer 2: {result['answer']}")
+    print(f"Answer 2: {result['final_answer']}")
 
 if __name__ == "__main__":
     try:
