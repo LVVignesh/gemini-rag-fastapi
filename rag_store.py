@@ -2,11 +2,12 @@ import faiss
 import os
 import pickle
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer, CrossEncoder
 from rank_bm25 import BM25Okapi
 
+HF_DEPLOYMENT = os.getenv("HF_DEPLOYMENT", "False").lower() == "true"
+
 USE_HNSW = True
-USE_RERANKER = True
+USE_RERANKER = not HF_DEPLOYMENT
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 200
@@ -21,8 +22,35 @@ metadata = []
 bm25 = None
 tokenized_corpus = []
 
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+embedder = None
+reranker = None
+db_loaded = False
+
+def get_embedder():
+    global embedder
+    if embedder is None:
+        if not HF_DEPLOYMENT:
+            print("[INFO] Lazy loading SentenceTransformer model (all-MiniLM-L6-v2)...")
+        from sentence_transformers import SentenceTransformer
+        embedder = SentenceTransformer("all-MiniLM-L6-v2")
+    return embedder
+
+def get_reranker():
+    global reranker
+    if reranker is None:
+        if not HF_DEPLOYMENT:
+            print("[INFO] Lazy loading CrossEncoder reranker model (cross-encoder/ms-marco-MiniLM-L-6-v2)...")
+        from sentence_transformers import CrossEncoder
+        reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    return reranker
+
+def ensure_db_loaded():
+    global db_loaded
+    if not db_loaded:
+        if not HF_DEPLOYMENT:
+            print("[INFO] Lazy loading database indices...")
+        load_db()
+        db_loaded = True
 
 def chunk_text(text):
     import re
@@ -69,7 +97,7 @@ def load_db():
         with open(DB_FILE_BM25, "wb") as f:
             pickle.dump(bm25, f)
 
-load_db()
+# load_db() - Now lazy-loaded via ensure_db_loaded()
 
 def clear_database():
     global index, documents, metadata, bm25
@@ -85,6 +113,7 @@ def clear_database():
         os.remove(DB_FILE_BM25)
 
 def ingest_documents(files):
+    ensure_db_loaded()
     global index, documents, metadata
     texts, meta = [], []
 
@@ -122,7 +151,7 @@ def ingest_documents(files):
     if not texts:
         raise ValueError("No readable text found (OCR needed for scanned PDFs).")
 
-    embeddings = embedder.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+    embeddings = get_embedder().encode(texts, convert_to_numpy=True, normalize_embeddings=True)
 
     if index is None:
         dim = embeddings.shape[1]
@@ -142,11 +171,12 @@ def ingest_documents(files):
     return len(documents)
 
 def search_knowledge(query, top_k=8):
+    ensure_db_loaded()
     if index is None:
         return []
 
     # 1. Vector Search
-    qvec = embedder.encode([query], convert_to_numpy=True, normalize_embeddings=True)
+    qvec = get_embedder().encode([query], convert_to_numpy=True, normalize_embeddings=True)
     scores, indices = index.search(qvec, top_k)
     
     vector_results = {}
@@ -192,7 +222,7 @@ def search_knowledge(query, top_k=8):
 
     if USE_RERANKER and candidates:
         pairs = [(query, c["text"]) for c in candidates]
-        rerank_scores = reranker.predict(pairs)
+        rerank_scores = get_reranker().predict(pairs)
         for c, rs in zip(candidates, rerank_scores):
             c["rerank"] = float(rs)
         candidates.sort(key=lambda x: x["rerank"], reverse=True)
@@ -200,4 +230,5 @@ def search_knowledge(query, top_k=8):
     return candidates[:5]
 
 def get_all_chunks(limit=80):
+    ensure_db_loaded()
     return [{"text": t, "metadata": m} for t, m in zip(documents[:limit], metadata[:limit])]

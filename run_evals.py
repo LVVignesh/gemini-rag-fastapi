@@ -1,7 +1,6 @@
 import json
 import os
 from llm_utils import generate_with_retry
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,8 +12,6 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     print("❌ GEMINI_API_KEY not found in env.")
     exit(1)
-
-genai.configure(api_key=API_KEY)
 
 def calculate_faithfulness(answer, contexts):
     """
@@ -36,9 +33,8 @@ def calculate_faithfulness(answer, contexts):
     
     Return ONLY a single float number (e.g. 0.9).
     """
-    model = genai.GenerativeModel(MODEL_NAME)
     try:
-        resp = model.generate_content(prompt)
+        resp = generate_with_retry(MODEL_NAME, prompt)
         score = float(resp.text.strip())
         return max(0.0, min(1.0, score))
     except:
@@ -60,9 +56,8 @@ def calculate_relevancy(query, answer):
     
     Return ONLY a single float number (e.g. 0.9).
     """
-    model = genai.GenerativeModel(MODEL_NAME)
     try:
-        resp = model.generate_content(prompt)
+        resp = generate_with_retry(MODEL_NAME, prompt)
         score = float(resp.text.strip())
         return max(0.0, min(1.0, score))
     except:

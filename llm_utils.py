@@ -1,7 +1,8 @@
 import time
 import random
-import google.generativeai as genai
-from google.api_core import exceptions
+import os
+from google import genai
+from google.genai.errors import APIError
 
 class DummyResponse:
     def __init__(self, text):
@@ -11,20 +12,34 @@ class DummyResponse:
     def text(self):
         return self._text
 
-def generate_with_retry(model, prompt, retries=5, base_delay=4):
+_client = None
+
+def get_genai_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        _client = genai.Client(api_key=api_key)
+    return _client
+
+def generate_with_retry(model_name, prompt, retries=5, base_delay=4):
     """
     Generates content using the Gemini model with exponential backoff for rate limits.
     Returns a dummy response if all retries fail, preventing app crashes.
     """
+    client = get_genai_client()
     for i in range(retries):
         try:
-            return model.generate_content(prompt)
+            return client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+            )
         except Exception as e:
             # Check for Rate Limit (429) or Quota Exceeded (ResourceExhausted)
             is_quota_error = (
                 "429" in str(e) 
                 or "quota" in str(e).lower() 
-                or isinstance(e, exceptions.ResourceExhausted)
+                or "resource_exhausted" in str(e).lower()
+                or (isinstance(e, APIError) and e.code == 429)
             )
             
             if is_quota_error:
@@ -37,8 +52,7 @@ def generate_with_retry(model, prompt, retries=5, base_delay=4):
                     print(f"❌ Quota exceeded after {retries} attempts. Returning resilience fallback.")
                     return DummyResponse("⚠️ **System Alert**: The AI service is currently experiencing high traffic (Quota Exceeded). Please try again in a few minutes.")
             
-            # If it's not a quota error (e.g. 500 server error), we might still want to be safe?
-            # For master's level, let's catch everything but log it.
+            # If it's not a quota error (e.g. 500 server error), we might still want to be safe
             print(f"❌ Error generating content: {e}")
             return DummyResponse(f"⚠️ **System Error**: {str(e)}")
             

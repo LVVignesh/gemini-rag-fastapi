@@ -1,12 +1,33 @@
 import os
+import sys
 from time import time
+
+# Start timing immediately
+startup_start_time = time()
+
+# Get memory usage function
+def get_memory_usage_mb():
+    try:
+        import resource
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    except Exception:
+        try:
+            with open("/proc/self/status", "r") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        return float(line.split()[1]) / 1024.0
+        except Exception:
+            pass
+    return None
+
+mem_initial = get_memory_usage_mb()
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 from rag_store import ingest_documents, get_all_chunks, clear_database, search_knowledge
 from analytics import get_analytics
@@ -18,8 +39,8 @@ import asyncio
 # ENV + MODEL
 # =========================================================
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+HF_DEPLOYMENT = os.getenv("HF_DEPLOYMENT", "False").lower() == "true"
 MOCK_MODE = False  # Refactor complete - enabling real agent
 MODEL_NAME = "gemini-3-flash-preview"
 MAX_FILE_SIZE = 50 * 1024 * 1024
@@ -47,8 +68,40 @@ app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 # =========================================================
 # STATE
 # =========================================================
-agentic_graph = build_agentic_rag_v2_graph()
+agentic_graph = None
 answer_cache: dict[str, tuple[float, dict]] = {}
+
+def get_agentic_graph():
+    global agentic_graph
+    if agentic_graph is None:
+        start_t = time()
+        print("[INFO] Lazily compiling agentic graph (build_agentic_rag_v2_graph)...")
+        agentic_graph = build_agentic_rag_v2_graph()
+        print(f"[SUCCESS] Agentic graph compiled in {time() - start_t:.4f} seconds.")
+    return agentic_graph
+
+# =========================================================
+# DIAGNOSTICS LOGGING
+# =========================================================
+startup_end_time = time()
+startup_duration = startup_end_time - startup_start_time
+mem_final = get_memory_usage_mb()
+
+if not HF_DEPLOYMENT:
+    print("=" * 60)
+    print("NEXUSGRAPH AI STARTUP DIAGNOSTICS")
+    print(f"Startup phase duration: {startup_duration:.4f} seconds")
+    print(f"HF_DEPLOYMENT mode: {HF_DEPLOYMENT}")
+    print(f"Lazy loading activated: True (Embedding, Reranker, and DB load deferred)")
+    if mem_initial is not None and mem_final is not None:
+        print(f"Memory footprint: Initial {mem_initial:.2f} MB -> Final {mem_final:.2f} MB (Delta: {mem_final - mem_initial:.2f} MB)")
+    else:
+        print("Memory footprint: N/A")
+    print("=" * 60)
+else:
+    mem_str = f"{mem_final:.1f}MB" if mem_final is not None else "N/A"
+    print(f"NexusGraph (HF Mode) started in {startup_duration:.3f}s. Memory: {mem_str}. Lazy loading: True.")
+sys.stdout.flush()
 
 # =========================================================
 # MODELS
@@ -171,9 +224,8 @@ async def ask(data: PromptRequest):
         chunks = get_all_chunks(limit=80)
         context = "\n\n".join(c["text"] for c in chunks)
 
-        model = genai.GenerativeModel(MODEL_NAME)
         resp = generate_with_retry(
-            model, 
+            MODEL_NAME, 
             f"Summarize the following content clearly:\n\n{context}"
         )
         
@@ -207,7 +259,7 @@ async def ask(data: PromptRequest):
     }
     
     try:
-        result = agentic_graph.invoke(initial_state, config={"configurable": {"thread_id": data.thread_id}})
+        result = get_agentic_graph().invoke(initial_state, config={"configurable": {"thread_id": data.thread_id}})
         
         # Extract citations from tool outputs
         citations = []

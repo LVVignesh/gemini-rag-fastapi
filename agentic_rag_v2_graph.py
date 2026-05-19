@@ -1,7 +1,7 @@
 import os
 import time
 from typing import TypedDict, List, Optional, Annotated, Literal
-import google.generativeai as genai
+# google.generativeai is deprecated, using genai via llm_utils string interface
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.message import add_messages
@@ -80,8 +80,7 @@ def text_to_sql_tool(query: str):
     - Output ONLY the SQL query. No markdown.
     - Do NOT use Markdown formatting.
     """
-    model = genai.GenerativeModel(MODEL_SMART)
-    resp = generate_with_retry(model, prompt)
+    resp = generate_with_retry(MODEL_SMART, prompt)
     sql_query = resp.text.strip().replace("```sql", "").replace("```", "").strip() if resp else ""
     
     if not sql_query:
@@ -122,8 +121,7 @@ def supervisor_node(state: AgentState):
     # Heuristic: If we already searched SQL and got results, maybe go to responder or PDF
     # But for now, let LLM decide based on history.
     
-    model = genai.GenerativeModel(MODEL_FAST)
-    resp = generate_with_retry(model, prompt)
+    resp = generate_with_retry(MODEL_FAST, prompt)
     decision = resp.text.strip().lower() if resp else "responder"
     
     if "sql" in decision: return {**state, "next_node": "research_sql"}
@@ -181,8 +179,7 @@ def verifier_node(state: AgentState):
     Provide concise verification notes for the Final Responder.
     """
     
-    model = genai.GenerativeModel(MODEL_SMART)
-    resp = generate_with_retry(model, prompt)
+    resp = generate_with_retry(MODEL_SMART, prompt)
     notes = resp.text if resp else "Verification completed."
     
     return {**state, "verification_notes": notes}
@@ -215,8 +212,7 @@ def responder_node(state: AgentState):
     Answer the user query. If you used SQL, summarize the data insights.
     """
     
-    model = genai.GenerativeModel(MODEL_SMART)
-    resp = generate_with_retry(model, prompt)
+    resp = generate_with_retry(MODEL_SMART, prompt)
     answer = resp.text if resp else "I could not generate an answer."
     
     # === NEW: LOG FULL EVALUATION DATA ===

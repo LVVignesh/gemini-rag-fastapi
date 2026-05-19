@@ -1,5 +1,5 @@
 from typing import TypedDict, List, Optional
-import google.generativeai as genai
+from llm_utils import generate_with_retry
 from langgraph.graph import StateGraph, END
 
 from rag_store import search_knowledge
@@ -50,9 +50,8 @@ Question:
 {state["query"]}
 """
 
-    model = genai.GenerativeModel(MODEL_NAME)
-    resp = model.generate_content(prompt)
-    answer_text = resp.text
+    resp = generate_with_retry(MODEL_NAME, prompt)
+    answer_text = resp.text if resp else "Error generating answer."
 
     confidence = min(1.0, len(state["retrieved_chunks"]) / 5)
     answer_known = "i don't know" not in answer_text.lower()

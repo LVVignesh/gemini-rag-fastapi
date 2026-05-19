@@ -11,9 +11,9 @@ if "TAVILY_API_KEY" not in os.environ:
 from agentic_rag_v2_graph import build_agentic_rag_v2_graph
 
 class TestRagGraph(unittest.TestCase):
-    @patch('agentic_rag_v2_graph.genai.GenerativeModel')
+    @patch('agentic_rag_v2_graph.generate_with_retry')
     @patch('agentic_rag_v2_graph.TavilyClient')
-    def test_web_search_flow(self, mock_tavily, mock_genai):
+    def test_web_search_flow(self, mock_tavily, mock_generate):
         print("\n\n=== 🧪 STARTING DRY RUN GRAPH TEST ===")
         print("Goal: Verify 'research_web' -> 'verifier' -> 'responder' flow without API calls.\n")
 
@@ -26,8 +26,6 @@ class TestRagGraph(unittest.TestCase):
         # =========================================
 
         # --- Setup Mocks ---
-        mock_model = MagicMock()
-        mock_genai.return_value = mock_model
         
         # Helper to create dummy response object
         def create_response(text):
@@ -41,7 +39,7 @@ class TestRagGraph(unittest.TestCase):
         # 3. Supervisor: "responder"
         # 4. Responder: "The Answer."
         
-        mock_model.generate_content.side_effect = [
+        mock_generate.side_effect = [
             create_response("research_web"),
             create_response(VERIFIER_NOTE),
             create_response("responder"),
