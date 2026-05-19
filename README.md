@@ -9,7 +9,9 @@ pinned: false
 
 # 🧠 NexusGraph AI 
 
-> **High Distinction Project**: An advanced "Agentic" Retrieval-Augmented Generation system that uses Graph Theory (LangGraph), Structural Retrieval (SQL), and Self-Correction to answer complex queries.
+> **High Distinction Project**: An advanced "Agentic" Retrieval-Augmented Generation system that uses Graph Theory (LangGraph), Structured Retrieval (SQLite), and Self-Correction to answer complex queries.
+
+*This repository contains the codebase for **NexusGraph AI**, deployed live on Hugging Face Spaces as [Gemini-Rag-Fastapi-Pro](https://huggingface.co/spaces/lvvignesh2122/Gemini-Rag-Fastapi-Pro).*
 
 ## 🚀 The "Master's Level" Difference
 
@@ -96,10 +98,10 @@ pytest
 ---
 
 ## 📊 Evaluation (The Science)
-We use an **LLM-as-a-Judge** approach (`run_evals.py`) to measure:
-*   **Faithfulness**: Is the answer hallucinated?
-*   **Relevancy**: Did we answer the prompt?
-*   *Current Benchmarks*: ~0.92 Faithfulness / 0.89 Relevancy.
+We use an **LLM-as-a-Judge** approach (`run_evals.py`) to programmatically score queries based on:
+*   **Faithfulness**: Verifying if the answer is derived strictly from the context (hallucination detection).
+*   **Relevancy**: Measuring how directly the answer addresses the user query.
+*   *Audit Execution*: Running `python run_evals.py` parses the production logs (`rag_eval_logs.jsonl`) and generates average system metrics.
 
 ---
 
