@@ -70,7 +70,10 @@ Fully containerized for "Run Anywhere" capability.
 
 ### Option A: Local Python
 1.  **Install**: `pip install -r requirements.txt`
-2.  **Environment**: Create `.env` with `GEMINI_API_KEY` and `TAVILY_API_KEY`.
+2.  **Environment**: Create `.env` containing your API keys and configuration:
+    *   `GEMINI_API_KEY`: Google Gemini API access.
+    *   `TAVILY_API_KEY`: Tavily search engine access.
+    *   `HF_DEPLOYMENT`: Set to `true` to enable lazy-loading performance mode (essential for free CPU hosting tiers, defers model downloads, and disables the heavy CrossEncoder reranker).
 3.  **Run Service**:
     ```bash
     uvicorn main:app --reload
